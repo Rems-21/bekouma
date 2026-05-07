@@ -175,13 +175,5 @@ def live_tracking_ping(request, token):
 
 
 def google_site_verification_file(request):
-    """Sert le fichier HTML de vérification Google à l’URL exacte demandée (racine du site)."""
-    requested = request.path.strip('/').rsplit('/', 1)[-1]
     site_info = SiteInfo.objects.first()
-    if not site_info:
-        raise Http404()
-    expected = (site_info.google_verification_filename or '').strip()
-    body = (site_info.google_verification_file_content or '').strip()
-    if not expected or not body or requested != expected:
-        raise Http404()
-    return HttpResponse(body, content_type='text/html; charset=utf-8')
+    return render(request, 'core/google2c82be27c4a4a6e2.html', {'google_verification_file_content': site_info.google_verification_file_content})
