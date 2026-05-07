@@ -15,13 +15,14 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    'azotic-pseudoartistically-angla.ngrok-free.dev',
+    'raolybtp.pythonanywhere.com',
 ]
 
 # Ngrok support (auth/register/login over HTTPS tunnel)
 CSRF_TRUSTED_ORIGINS = [
     'https://azotic-pseudoartistically-angla.ngrok-free.dev',
     'https://*.ngrok-free.dev',
+    'https://raolybtp.pythonanywhere.com',
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
