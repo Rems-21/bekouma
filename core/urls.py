@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from . import views
 
@@ -28,9 +28,10 @@ urlpatterns = [
         views.staff_zone_monitor_positions_json,
         name='staff_zone_monitor_json',
     ),
-    path(
-        '/google2c82be27c4a4a6e2.html',
-        views.google_verification,
-        name='google_verification',
+    # À la racine du site : https://votredomaine.fr/google….html
+    re_path(
+        r'^google[a-zA-Z0-9_-]+\.html$',
+        views.google_site_verification_file,
+        name='google_site_verification',
     ),
 ]

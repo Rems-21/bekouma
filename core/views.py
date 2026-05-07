@@ -4,7 +4,7 @@ from datetime import date
 
 from django.conf import settings
 from django.contrib.auth.decorators import user_passes_test
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -173,9 +173,15 @@ def live_tracking_ping(request, token):
     )
     return JsonResponse({'ok': True})
 
-def google_verification(request):
+
+def google_site_verification_file(request):
+    """Sert le fichier HTML de vérification Google à l’URL exacte demandée (racine du site)."""
+    requested = request.path.strip('/').rsplit('/', 1)[-1]
     site_info = SiteInfo.objects.first()
-    if site_info and site_info.google_verification_code:
-        return render(request, 'core/google2c82be27c4a4a6e2.html', {'code': site_info})
-    else:
-        return render(request, 'core/google2c82be27c4a4a6e2.html', {'code': ''}, status=404)
+    if not site_info:
+        raise Http404()
+    expected = (site_info.google_verification_filename or '').strip()
+    body = (site_info.google_verification_file_content or '').strip()
+    if not expected or not body or requested != expected:
+        raise Http404()
+    return HttpResponse(body, content_type='text/html; charset=utf-8')

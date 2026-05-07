@@ -26,7 +26,18 @@ class SiteInfo(models.Model):
     instagram = models.URLField(blank=True)
     twitter = models.URLField(blank=True)
     whatsapp = models.CharField(max_length=20, blank=True)
-    
+    # Fichier HTML de vérification Google Search Console (nom exact + contenu sur une ligne)
+    google_verification_filename = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text='Ex. google2c82be27c4a4a6e2.html (tel que fourni par Google).',
+    )
+    google_verification_file_content = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text='Une seule ligne, identique au fichier téléchargé depuis Google.',
+    )
+
     class Meta:
         verbose_name = "Informations du site"
         verbose_name_plural = "Informations du site"
