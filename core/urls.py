@@ -29,7 +29,7 @@ urlpatterns = [
         name='staff_zone_monitor_json',
     ),
     path(
-        '/',
+        '/google2c82be27c4a4a6e2.html',
         views.google_verification,
         name='google_verification',
     ),
