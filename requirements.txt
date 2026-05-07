@@ -1,0 +1,8 @@
+Django>=4.2,<5.0
+Pillow
+django-crispy-forms
+crispy-bootstrap5
+reportlab
+qrcode
+requests
+python-dateutil

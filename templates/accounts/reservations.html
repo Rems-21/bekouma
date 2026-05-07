@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}Mes réservations - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-calendar-check me-2 text-gold"></i>Mes réservations</h2>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-dark-nav text-white">
+                        <tr>
+                            <th>#</th>
+                            <th>Matériel</th>
+                            <th>Qté</th>
+                            <th>Chauffeur</th>
+                            <th>Date prise</th>
+                            <th>Date retour</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th>Emplacement</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in reservations %}
+                        <tr>
+                            <td>{{ res.pk }}</td>
+                            <td>
+                                <a href="{% url 'equipment:detail' res.equipment.slug %}" class="text-gold">
+                                    {{ res.equipment.name }}
+                                </a>
+                            </td>
+                            <td>{{ res.quantity }}</td>
+                            <td>{% if res.with_driver %}<i class="fas fa-check text-success"></i>{% else %}-{% endif %}</td>
+                            <td>{{ res.rental_date|date:"d/m/Y" }}</td>
+                            <td>{{ res.return_date|date:"d/m/Y" }}</td>
+                            <td class="fw-bold">{{ res.total_price|intcomma }} FCFA</td>
+                            <td>
+                                {% if res.status == 'confirmed' %}
+                                <span class="badge bg-success">Confirmée</span>
+                                {% elif res.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">En attente</span>
+                                {% elif res.status == 'active' %}
+                                <span class="badge bg-primary">En cours</span>
+                                {% elif res.status == 'completed' %}
+                                <span class="badge bg-secondary">Terminée</span>
+                                {% elif res.status == 'cancelled' %}
+                                <span class="badge bg-danger">Annulée</span>
+                                {% if res.cancellation_refund > 0 %}
+                                <br><small class="text-success">Remb: {{ res.cancellation_refund|intcomma }} F</small>
+                                {% endif %}
+                                {% elif res.status == 'late' %}
+                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> En retard</span>
+                                {% if res.late_fee > 0 %}
+                                <br><small class="text-danger">Pénalité: {{ res.late_fee|intcomma }} F</small>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if res.declared_location_name %}
+                                <span class="badge bg-info text-dark mb-1">Déclaré</span><br>
+                                <small>{{ res.declared_location_name }}</small>
+                                {% if res.location_declared_at %}
+                                <br><small class="text-muted">{{ res.location_declared_at|date:"d/m/Y H:i" }}</small>
+                                {% endif %}
+                                {% elif res.equipment.location_name %}
+                                <small class="text-muted">{{ res.equipment.location_name }}</small>
+                                {% else %}
+                                <small class="text-muted">Non renseigné</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if res.status == 'pending' or res.status == 'confirmed' %}
+                                <a href="{% url 'cart:cancel' res.pk %}" class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Politique d\'annulation:\n- 3 jours avant: remboursement 90%\n- 2 jours avant: remboursement 50%\n- 1 jour avant: aucun remboursement\n\nConfirmer l\'annulation ?')">
+                                    <i class="fas fa-times me-1"></i>Annuler
+                                </a>
+                                {% endif %}
+                                {% if res.status == 'confirmed' or res.status == 'active' %}
+                                {% if not res.declared_location_name %}
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary mt-1 location-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#locationModal"
+                                        data-action="{% url 'cart:update_location' res.pk %}"
+                                        data-reservation="#{{ res.pk }}"
+                                        data-lat="{% if res.declared_latitude %}{{ res.declared_latitude|unlocalize }}{% else %}{{ res.equipment.latitude|unlocalize }}{% endif %}"
+                                        data-lng="{% if res.declared_longitude %}{{ res.declared_longitude|unlocalize }}{% else %}{{ res.equipment.longitude|unlocalize }}{% endif %}"
+                                        data-location="{% if res.declared_location_name %}{{ res.declared_location_name|escapejs }}{% else %}{{ res.equipment.location_name|escapejs }}{% endif %}">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Mettre à jour
+                                </button>
+                                {% elif res.declared_location_name %}
+                                <span class="badge bg-secondary mt-1"><i class="fas fa-lock me-1"></i>Emplacement verrouillé</span>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="10" class="text-center py-5 text-muted">
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                            <p>Aucune réservation pour le moment</p>
+                            <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold">Louer un matériel</a>
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de mise à jour d'emplacement -->
+<div class="modal fade" id="locationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form id="locationForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-map-marker-alt text-gold me-2"></i>Nouvel emplacement d'utilisation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Déplacez le marqueur pour indiquer le nouvel emplacement exact de l'engin.</p>
+                    <div id="reservationLocationMap" style="height: 330px; border-radius: 12px; border: 1px solid #ddd;"></div>
+                    <div class="row mt-3 g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1">Latitude</label>
+                            <input class="form-control form-control-sm" id="locationLat" name="latitude" readonly required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1">Longitude</label>
+                            <input class="form-control form-control-sm" id="locationLng" name="longitude" readonly required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small mb-1">Description de l'emplacement</label>
+                            <input class="form-control form-control-sm" id="locationName" name="location_name" placeholder="Ex: Douala - Bonamoussadi">
+                        </div>
+                    </div>
+                    <div class="alert alert-warning mt-3 mb-0 py-2 small">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        L'utilisation de l'engin hors emplacement déclaré expose à une pénalité contractuelle.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span class="me-auto small text-muted" id="reservationRef"></span>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-primary-gold">
+                        <i class="fas fa-save me-1"></i>Enregistrer l'emplacement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let reservationMap = null;
+let reservationMarker = null;
+
+function setReservationPoint(lat, lng) {
+    document.getElementById('locationLat').value = Number(lat).toFixed(6);
+    document.getElementById('locationLng').value = Number(lng).toFixed(6);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modalEl = document.getElementById('locationModal');
+    if (!modalEl) return;
+
+    modalEl.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        if (!button) return;
+
+        const action = button.getAttribute('data-action');
+        const reservation = button.getAttribute('data-reservation') || '';
+        const lat = parseFloat(button.getAttribute('data-lat') || '4.0511');
+        const lng = parseFloat(button.getAttribute('data-lng') || '9.7679');
+        const location = button.getAttribute('data-location') || '';
+
+        document.getElementById('locationForm').setAttribute('action', action);
+        document.getElementById('reservationRef').textContent = 'Réservation ' + reservation;
+        document.getElementById('locationName').value = location;
+        setReservationPoint(lat, lng);
+
+        setTimeout(function() {
+            if (!reservationMap) {
+                reservationMap = L.map('reservationLocationMap', { scrollWheelZoom: false }).setView([lat, lng], 14);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 20
+                }).addTo(reservationMap);
+
+                reservationMarker = L.marker([lat, lng], { draggable: true }).addTo(reservationMap);
+                reservationMarker.on('dragend', function() {
+                    const p = reservationMarker.getLatLng();
+                    setReservationPoint(p.lat, p.lng);
+                });
+                reservationMap.on('click', function(e) {
+                    reservationMarker.setLatLng(e.latlng);
+                    setReservationPoint(e.latlng.lat, e.latlng.lng);
+                });
+            } else {
+                reservationMap.setView([lat, lng], 14);
+                reservationMarker.setLatLng([lat, lng]);
+                reservationMap.invalidateSize();
+            }
+        }, 180);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Contrat {{ contract.contract_number }} - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-dark-nav text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-contract me-2"></i>Contrat de Location</h5>
+                </div>
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h3>Contrat généré avec succès !</h3>
+                        <p class="text-muted">Votre contrat de location est prêt.</p>
+                    </div>
+
+                    <div class="contract-details">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="detail-box">
+                                    <strong>N° de contrat</strong>
+                                    <p class="text-gold mb-0">{{ contract.contract_number }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="detail-box">
+                                    <strong>Commande</strong>
+                                    <p class="mb-0">#{{ order.pk }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="detail-box">
+                                    <strong>Date de génération</strong>
+                                    <p class="mb-0">{{ contract.generated_at|date:"d/m/Y H:i" }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="detail-box">
+                                    <strong>Montant total</strong>
+                                    <p class="text-gold fw-bold mb-0">{{ order.total_amount|intcomma }} FCFA</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5 class="mb-3">Matériels loués</h5>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Matériel</th>
+                                        <th>Qté</th>
+                                        <th>Période</th>
+                                        <th>Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for res in order.reservations.all %}
+                                    <tr>
+                                        <td>{{ res.equipment.name }}</td>
+                                        <td>{{ res.quantity }}</td>
+                                        <td>{{ res.rental_date|date:"d/m" }} - {{ res.return_date|date:"d/m/Y" }}</td>
+                                        <td>{{ res.total_price|intcomma }} F</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex gap-3 justify-content-center">
+                            <a href="{% url 'contracts:download' contract.pk %}" class="btn btn-primary-gold btn-lg">
+                                <i class="fas fa-download me-2"></i>Télécharger le PDF
+                            </a>
+                            <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-tachometer-alt me-2"></i>Tableau de bord
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

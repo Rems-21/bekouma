@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Retour paiement - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <i class="fas fa-hourglass-half fa-4x text-warning mb-3"></i>
+                    <h3>Paiement en cours de traitement</h3>
+                    <p class="text-muted">Votre paiement est en cours de vérification (confirmation côté Notch Pay ou webhook). Vous recevrez une notification dès que le paiement sera confirmé.</p>
+                    {% if order_id %}
+                    <p>Commande #{{ order_id }}</p>
+                    {% if user.is_authenticated %}
+                    <p class="small text-muted mb-2">Si vous avez déjà payé, vous pouvez forcer une vérification auprès de Notch Pay.</p>
+                    <a href="{% url 'payments:sync_order' order_id %}" class="btn btn-outline-primary mb-3">
+                        <i class="fas fa-sync-alt me-2"></i>Rafraîchir le statut du paiement
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                    <a href="{% url 'accounts:dashboard' %}" class="btn btn-primary-gold mt-3">
+                        <i class="fas fa-tachometer-alt me-2"></i>Aller au tableau de bord
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

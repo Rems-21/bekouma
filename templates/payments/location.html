@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load l10n %}
+
+{% block title %}Emplacement d'utilisation - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-map-marker-alt me-2 text-gold"></i>Choisir l'emplacement d'utilisation</h2>
+
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Déclarez l'emplacement réel d'utilisation. Une pénalité contractuelle s'applique en cas d'utilisation hors emplacement déclaré.
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header bg-dark-nav text-white">
+                    <h6 class="mb-0">Carte - Déplacez le marqueur</h6>
+                </div>
+                <div class="card-body">
+                    <div id="usageLocationMap" style="height: 420px; border-radius: 12px; border: 1px solid #ddd;"></div>
+                    <p class="small text-muted mt-2 mb-0">Astuce: sélectionnez un matériel puis déplacez le marqueur à son nouvel emplacement.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <form method="POST" action="{% url 'payments:initiate' %}" id="locationForm">
+                {% csrf_token %}
+                <div class="card">
+                    <div class="card-header bg-gold text-dark">
+                        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Matériels à localiser</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-light border mb-3 py-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="small text-muted mb-1">Matériel sélectionné</div>
+                                    <div id="selectedEquipmentName" class="fw-bold">Aucun</div>
+                                    <div id="selectedEquipmentAmount" class="small text-muted"></div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="small text-muted">Total commande</div>
+                                    <div class="fw-bold text-gold fs-5">{{ total|intcomma }} FCFA</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% for item in items %}
+                        <div class="border rounded p-2 mb-2 location-item-card" data-item-card="{{ item.id }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ item.equipment.name }}</strong>
+                                    <div class="small text-muted">Qté {{ item.quantity }} • {{ item.subtotal|intcomma }} FCFA</div>
+                                </div>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary select-item-btn"
+                                        data-item-id="{{ item.id }}"
+                                        data-item-name="{{ item.equipment.name|escapejs }}"
+                                        data-item-amount="{{ item.subtotal|intcomma }} FCFA"
+                                        data-lat="{{ item.equipment.latitude|unlocalize }}"
+                                        data-lng="{{ item.equipment.longitude|unlocalize }}"
+                                        data-location="{{ item.equipment.location_name|escapejs }}">
+                                    Sélectionner
+                                </button>
+                            </div>
+                            <div class="row g-2 mt-1">
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" id="lat_{{ item.id }}" name="latitude_{{ item.id }}" value="{{ item.equipment.latitude|unlocalize }}" readonly required>
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" id="lng_{{ item.id }}" name="longitude_{{ item.id }}" value="{{ item.equipment.longitude|unlocalize }}" readonly required>
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" class="form-control form-control-sm" id="loc_{{ item.id }}" name="location_name_{{ item.id }}" value="{{ item.equipment.location_name }}" placeholder="Ex: Douala - PK12">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="fw-bold">Total</span>
+                            <span class="text-gold fw-bold fs-5">{{ total|intcomma }} FCFA</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary-gold w-100 btn-lg mt-3">
+                            <i class="fas fa-lock me-2"></i>Continuer vers le paiement
+                        </button>
+                        <a href="{% url 'payments:checkout' %}" class="btn btn-outline-secondary w-100 mt-2">Retour</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const itemsLocations = {{ items_locations_json|safe }};
+let map = null;
+let marker = null;
+let selectedItemId = null;
+
+function updateSelectionUI(itemId, itemName, itemAmount) {
+    document.getElementById('selectedEquipmentName').textContent = itemName || 'Aucun';
+    document.getElementById('selectedEquipmentAmount').textContent = itemAmount || '';
+    document.querySelectorAll('.location-item-card').forEach(function(card) {
+        card.classList.remove('border-primary', 'shadow-sm');
+    });
+    const activeCard = document.querySelector('[data-item-card="' + itemId + '"]');
+    if (activeCard) {
+        activeCard.classList.add('border-primary', 'shadow-sm');
+    }
+}
+
+function setItemCoords(itemId, lat, lng) {
+    const latInput = document.getElementById('lat_' + itemId);
+    const lngInput = document.getElementById('lng_' + itemId);
+    if (latInput) latInput.value = Number(lat).toFixed(6);
+    if (lngInput) lngInput.value = Number(lng).toFixed(6);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    map = L.map('usageLocationMap', { scrollWheelZoom: false }).setView([4.0511, 9.7679], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    marker = L.marker([4.0511, 9.7679], { draggable: true }).addTo(map);
+    marker.on('dragend', function() {
+        if (!selectedItemId) return;
+        const p = marker.getLatLng();
+        setItemCoords(selectedItemId, p.lat, p.lng);
+    });
+
+    map.on('click', function(e) {
+        if (!selectedItemId) return;
+        marker.setLatLng(e.latlng);
+        setItemCoords(selectedItemId, e.latlng.lat, e.latlng.lng);
+    });
+
+    document.querySelectorAll('.select-item-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            selectedItemId = btn.getAttribute('data-item-id');
+            const itemName = btn.getAttribute('data-item-name') || '';
+            const itemAmount = btn.getAttribute('data-item-amount') || '';
+            const lat = parseFloat(btn.getAttribute('data-lat') || '4.0511');
+            const lng = parseFloat(btn.getAttribute('data-lng') || '9.7679');
+            const location = btn.getAttribute('data-location') || '';
+
+            marker.setLatLng([lat, lng]);
+            map.flyTo([lat, lng], 14, { duration: 0.7 });
+            setItemCoords(selectedItemId, lat, lng);
+            updateSelectionUI(selectedItemId, itemName, itemAmount);
+
+            const locInput = document.getElementById('loc_' + selectedItemId);
+            if (locInput && !locInput.value) {
+                locInput.value = location;
+            }
+        });
+    });
+
+    if (itemsLocations.length > 0) {
+        const first = itemsLocations[0];
+        selectedItemId = String(first.item_id);
+        marker.setLatLng([first.lat || 4.0511, first.lng || 9.7679]);
+        map.setView([first.lat || 4.0511, first.lng || 9.7679], 13);
+        const firstBtn = document.querySelector('.select-item-btn[data-item-id="' + selectedItemId + '"]');
+        if (firstBtn) {
+            updateSelectionUI(
+                selectedItemId,
+                firstBtn.getAttribute('data-item-name') || '',
+                firstBtn.getAttribute('data-item-amount') || ''
+            );
+        }
+    }
+});
+</script>
+{% endblock %}

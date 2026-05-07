@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vérification d'identité (KYC) - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-dark-nav text-white">
+                    <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>Vérification d’identité (KYC)</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-4">
+                        Obligatoire avant toute location. Un administrateur valide vos pièces. En cas de refus, vous ne pouvez soumettre de nouveau dossier que jusqu’à 3 rejets maximum.
+                    </p>
+
+                    {% if kyc_user.kyc_status == 'pending_review' %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-hourglass-half me-2"></i>
+                        <strong>En cours de vérification.</strong> Vous serez notifié après examen par l’équipe.
+                    </div>
+                    {% elif kyc_user.kyc_status == 'rejected' %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>Dossier refusé.</strong>
+                        {% if kyc_user.kyc_reject_count >= 3 %}
+                            <p class="mb-0 mt-2">Vous avez atteint le maximum de 3 refus. Contactez l’équipe RAOLY BTP pour réactivation.</p>
+                        {% else %}
+                        {% if kyc_user.kyc_rejection_reason %}
+                        <p class="mb-0 mt-2">{{ kyc_user.kyc_rejection_reason }}</p>
+                        {% else %}
+                        <p class="mb-0 mt-2">Veuillez envoyer de nouvelles pièces lisibles et à jour.</p>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    {% elif kyc_user.kyc_status == 'not_submitted' %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Complétez les documents ci-dessous puis enregistrez pour lancer la vérification.
+                    </div>
+                    {% endif %}
+
+                    {% if kyc_user.user_type == 'entreprise' %}
+                    <div class="alert alert-secondary small">
+                        <strong>Compte entreprise :</strong> registre de commerce, NIF / identifiant fiscal, justificatif de domicile du siège —
+                        et <a href="{% url 'accounts:profile' %}">raison sociale renseignée dans le profil</a>.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary small">
+                        <strong>Compte particulier :</strong> pièce d’identité et justificatif de domicile.
+                    </div>
+                    {% endif %}
+
+                    {% if kyc_user.kyc_status != 'pending_review' %}
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+
+                        {% if kyc_user.user_type == 'particulier' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ form.kyc_id_document.label }}</label>
+                            {{ form.kyc_id_document }}
+                            {% if kyc_user.kyc_id_document %}
+                            <div class="small mt-1"><a href="{{ kyc_user.kyc_id_document.url }}" target="_blank" rel="noopener">Fichier actuel</a></div>
+                            {% endif %}
+                            {% if form.kyc_id_document.errors %}<div class="text-danger small">{{ form.kyc_id_document.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ form.kyc_id_back_document.label }}</label>
+                            {{ form.kyc_id_back_document }}
+                            {% if kyc_user.kyc_id_back_document %}
+                            <div class="small mt-1"><a href="{{ kyc_user.kyc_id_back_document.url }}" target="_blank" rel="noopener">Fichier actuel</a></div>
+                            {% endif %}
+                            {% if form.kyc_id_back_document.errors %}<div class="text-danger small">{{ form.kyc_id_back_document.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ form.kyc_proof_of_address.label }}</label>
+                            {{ form.kyc_proof_of_address }}
+                            {% if kyc_user.kyc_proof_of_address %}
+                            <div class="small mt-1"><a href="{{ kyc_user.kyc_proof_of_address.url }}" target="_blank" rel="noopener">Fichier actuel</a></div>
+                            {% endif %}
+                            {% if form.kyc_proof_of_address.errors %}<div class="text-danger small">{{ form.kyc_proof_of_address.errors }}</div>{% endif %}
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ form.kyc_rc_document.label }}</label>
+                            {{ form.kyc_rc_document }}
+                            {% if kyc_user.kyc_rc_document %}
+                            <div class="small mt-1"><a href="{{ kyc_user.kyc_rc_document.url }}" target="_blank" rel="noopener">Fichier actuel</a></div>
+                            {% endif %}
+                            {% if form.kyc_rc_document.errors %}<div class="text-danger small">{{ form.kyc_rc_document.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ form.kyc_tax_document.label }}</label>
+                            {{ form.kyc_tax_document }}
+                            {% if kyc_user.kyc_tax_document %}
+                            <div class="small mt-1"><a href="{{ kyc_user.kyc_tax_document.url }}" target="_blank" rel="noopener">Fichier actuel</a></div>
+                            {% endif %}
+                            {% if form.kyc_tax_document.errors %}<div class="text-danger small">{{ form.kyc_tax_document.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ form.kyc_company_proof_of_address.label }}</label>
+                            {{ form.kyc_company_proof_of_address }}
+                            {% if kyc_user.kyc_company_proof_of_address %}
+                            <div class="small mt-1"><a href="{{ kyc_user.kyc_company_proof_of_address.url }}" target="_blank" rel="noopener">Fichier actuel</a></div>
+                            {% endif %}
+                            {% if form.kyc_company_proof_of_address.errors %}<div class="text-danger small">{{ form.kyc_company_proof_of_address.errors }}</div>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3 form-check">
+                            {{ form.accept_kyc_data_processing }}
+                            <label class="form-check-label" for="{{ form.accept_kyc_data_processing.id_for_label }}">
+                                {{ form.accept_kyc_data_processing.label }}
+                            </label>
+                            {% if form.accept_kyc_data_processing.errors %}
+                            <div class="text-danger small">{{ form.accept_kyc_data_processing.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <p class="small text-muted mb-3">
+                            Pour toute question : <a href="{% url 'core:contact' %}">contact</a>.
+                        </p>
+
+                        <button type="submit" class="btn btn-primary-gold">
+                            <i class="fas fa-paper-plane me-2"></i>Envoyer pour vérification
+                        </button>
+                        <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary ms-2">Retour</a>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-secondary">Retour au tableau de bord</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

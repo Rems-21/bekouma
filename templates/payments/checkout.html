@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load pricing %}
+
+{% block title %}Paiement - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-credit-card me-2 text-gold"></i>Finaliser le paiement</h2>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-dark-nav text-white">
+                    <h5 class="mb-0">Détails de la commande</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Période :</strong> {{ rental_date|date:"d/m/Y" }} au {{ return_date|date:"d/m/Y" }}
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Matériel</th>
+                                    <th>Qté</th>
+                                    <th>Prix/jour</th>
+                                    <th>Jours</th>
+                                    <th>Chauffeur</th>
+                                    <th>Sous-total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.equipment.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.equipment|daily_price:request|intcomma }} F</td>
+                                    <td>{{ item.num_days }}</td>
+                                    <td>{% if item.with_driver %}Oui{% else %}Non{% endif %}</td>
+                                    <td class="fw-bold">{{ item.subtotal|intcomma }} FCFA</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-active">
+                                    <td colspan="5" class="fw-bold text-end">Total</td>
+                                    <td class="fw-bold text-gold fs-5">{{ total|intcomma }} FCFA</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6>Conditions</h6>
+                    <ul class="small">
+                        <li>Paiement sécurisé via Notch Pay (Mobile Money, autres canaux selon disponibilité)</li>
+                        <li>Contrat de location généré automatiquement après paiement</li>
+                        <li>Pénalité de retard : 2% du montant par jour de retard</li>
+                        <li>Transaction enregistrée sur la blockchain pour votre sécurité</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card summary-card">
+                <div class="card-header bg-gold text-dark">
+                    <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Paiement sécurisé</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Sous-total</span>
+                        <span>{{ total|intcomma }} FCFA</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold fs-5 mb-3">
+                        <span>Total</span>
+                        <span class="text-gold">{{ total|intcomma }} FCFA</span>
+                    </div>
+                    <a href="{% url 'payments:location' %}" class="btn btn-primary-gold w-100 btn-lg">
+                        <i class="fas fa-map-marker-alt me-2"></i>Choisir l'emplacement d'utilisation
+                    </a>
+                    <div class="text-center mt-3">
+                        <small class="text-muted"><i class="fas fa-shield-alt me-1"></i>Sécurisé par Notch Pay + Blockchain</small>
+                    </div>
+                    <a href="{% url 'cart:view' %}" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="fas fa-arrow-left me-2"></i>Retour au panier
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

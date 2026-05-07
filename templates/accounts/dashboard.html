@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Tableau de bord - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Bonjour, {{ user.first_name|default:user.username }} !</h2>
+            <p class="text-muted mb-0">Bienvenue sur votre tableau de bord</p>
+        </div>
+        <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold">
+            <i class="fas fa-plus me-2"></i>Nouvelle location
+        </a>
+    </div>
+
+    {% if not user_can_rent %}
+    <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <i class="fas fa-id-card me-2"></i>
+            <strong>Location bloquée</strong> tant que votre identité n’est pas vérifiée (KYC).
+            {% if user_kyc_status == 'pending_review' %}
+            <span class="d-block small mt-1">Statut : en cours de vérification.</span>
+            {% elif user_kyc_status == 'rejected' %}
+            <span class="d-block small mt-1">Statut : dossier refusé — vous pouvez renvoyer vos pièces.</span>
+            {% endif %}
+        </div>
+        <a href="{% url 'accounts:kyc' %}" class="btn btn-sm btn-outline-dark">Vérification d’identité</a>
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card card">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check fa-2x text-gold mb-2"></i>
+                    <h3>{{ total_reservations }}</h3>
+                    <p class="text-muted mb-0">Total réservations</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card">
+                <div class="card-body text-center">
+                    <i class="fas fa-spinner fa-2x text-primary mb-2"></i>
+                    <h3>{{ active_reservations.count }}</h3>
+                    <p class="text-muted mb-0">En cours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                    <h3>{{ pending_reservations.count }}</h3>
+                    <p class="text-muted mb-0">En attente</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card">
+                <div class="card-body text-center">
+                    <i class="fas fa-bell fa-2x text-danger mb-2"></i>
+                    <h3>{{ notifications.count }}</h3>
+                    <p class="text-muted mb-0">Notifications</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Recent Reservations -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-dark-nav text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Réservations récentes</h5>
+                    <a href="{% url 'accounts:reservations' %}" class="btn btn-sm btn-outline-light">Voir tout</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Matériel</th>
+                                    <th>Date prise</th>
+                                    <th>Date retour</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for res in reservations %}
+                                <tr>
+                                    <td>{{ res.pk }}</td>
+                                    <td>{{ res.equipment.name }}</td>
+                                    <td>{{ res.rental_date|date:"d/m/Y" }}</td>
+                                    <td>{{ res.return_date|date:"d/m/Y" }}</td>
+                                    <td class="fw-bold">{{ res.total_price|intcomma }} F</td>
+                                    <td>
+                                        {% if res.status == 'confirmed' %}
+                                        <span class="badge bg-success">Confirmée</span>
+                                        {% elif res.status == 'pending' %}
+                                        <span class="badge bg-warning">En attente</span>
+                                        {% elif res.status == 'active' %}
+                                        <span class="badge bg-primary">En cours</span>
+                                        {% elif res.status == 'completed' %}
+                                        <span class="badge bg-secondary">Terminée</span>
+                                        {% elif res.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Annulée</span>
+                                        {% elif res.status == 'late' %}
+                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Retard</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if res.status == 'pending' or res.status == 'confirmed' %}
+                                        <a href="{% url 'cart:cancel' res.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Voulez-vous vraiment annuler cette réservation ?')">
+                                            Annuler
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center py-4 text-muted">Aucune réservation</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-dark-nav text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notifications</h5>
+                    {% if notifications %}
+                    <a href="{% url 'accounts:mark_all_read' %}" class="btn btn-sm btn-outline-light">Tout lire</a>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0" style="max-height:400px; overflow-y:auto;">
+                    {% for notif in notifications %}
+                    <div class="notification-item {% if not notif.is_read %}unread{% endif %} p-3 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <strong class="small">
+                                {% if notif.notification_type == 'payment' %}<i class="fas fa-credit-card text-success me-1"></i>
+                                {% elif notif.notification_type == 'cancellation' %}<i class="fas fa-ban text-danger me-1"></i>
+                                {% elif notif.notification_type == 'reminder' %}<i class="fas fa-clock text-warning me-1"></i>
+                                {% else %}<i class="fas fa-info-circle text-primary me-1"></i>
+                                {% endif %}
+                                {{ notif.title }}
+                            </strong>
+                            <small class="text-muted">{{ notif.created_at|timesince }} </small>
+                        </div>
+                        <p class="mb-1 small text-muted">{{ notif.message }}</p>
+                        {% if notif.link %}
+                        <a href="{{ notif.link }}" class="small text-gold">Voir &rarr;</a>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-bell-slash fa-2x mb-2"></i>
+                        <p>Aucune notification</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

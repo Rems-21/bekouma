@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Notifications - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-bell me-2 text-gold"></i>Notifications</h2>
+        {% if notifications %}
+        <a href="{% url 'accounts:mark_all_read' %}" class="btn btn-outline-gold btn-sm">
+            <i class="fas fa-check-double me-1"></i>Tout marquer comme lu
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            {% for notif in notifications %}
+            <div class="notification-item {% if not notif.is_read %}unread{% endif %} p-3 border-bottom d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        {% if notif.notification_type == 'payment' %}<span class="badge bg-success">Paiement</span>
+                        {% elif notif.notification_type == 'cancellation' %}<span class="badge bg-danger">Annulation</span>
+                        {% elif notif.notification_type == 'reminder' %}<span class="badge bg-warning">Rappel</span>
+                        {% elif notif.notification_type == 'penalty' %}<span class="badge bg-danger">Pénalité</span>
+                        {% else %}<span class="badge bg-info">Info</span>{% endif %}
+                        <strong>{{ notif.title }}</strong>
+                        <small class="text-muted">{{ notif.created_at|timesince }}</small>
+                    </div>
+                    <p class="mb-1 text-muted">{{ notif.message }}</p>
+                    {% if notif.link %}
+                    <a href="{{ notif.link }}" class="text-gold small">Voir les détails &rarr;</a>
+                    {% endif %}
+                </div>
+                {% if not notif.is_read %}
+                <a href="{% url 'accounts:mark_read' notif.pk %}" class="btn btn-sm btn-outline-secondary ms-2" title="Marquer comme lu">
+                    <i class="fas fa-check"></i>
+                </a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h5>Aucune notification</h5>
+                <p class="text-muted">Vos notifications apparaîtront ici.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

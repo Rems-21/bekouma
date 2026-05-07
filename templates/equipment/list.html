@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load pricing %}
+
+{% block title %}Matériels - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="card filter-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtres</h5>
+                    <form method="GET" action="{% url 'equipment:list' %}">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Recherche</label>
+                            <input type="text" name="q" class="form-control" value="{{ query }}" placeholder="Mot-clé...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Catégorie</label>
+                            <select name="category" class="form-select">
+                                <option value="">Toutes</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"d" %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary-gold w-100">Filtrer</button>
+                        {% if query or selected_category %}
+                        <a href="{% url 'equipment:list' %}" class="btn btn-outline-secondary w-100 mt-2">Réinitialiser</a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Grid -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>
+                    {% if query %}Résultats pour "{{ query }}"{% else %}Tous les matériels{% endif %}
+                    <small class="text-muted">({{ equipments|length }})</small>
+                </h3>
+                <a href="{% url 'equipment:map' %}" class="btn btn-outline-gold btn-sm">
+                    <i class="fas fa-map me-1"></i>Voir sur carte
+                </a>
+            </div>
+            <div class="row g-4">
+                {% for eq in equipments %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="equipment-card card h-100">
+                        <div class="card-img-wrapper">
+                            {% if eq.image %}
+                            <img src="{{ eq.image.url }}" class="card-img-top" alt="{{ eq.name }}">
+                            {% else %}
+                            <div class="card-img-placeholder"><i class="fas fa-truck-loading"></i></div>
+                            {% endif %}
+                            <span class="badge-condition badge-{{ eq.condition }}">{{ eq.get_condition_display }}</span>
+                            {% if eq.requires_driver %}
+                            <span class="badge-driver"><i class="fas fa-hard-hat"></i></span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <span class="equipment-category">{{ eq.category.name }}</span>
+                            <h5 class="card-title">{{ eq.name }}</h5>
+                            <p class="card-text text-muted small">{{ eq.description|truncatewords:12 }}</p>
+                            {% if eq.location_name %}
+                            <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt me-1"></i>{{ eq.location_name }}</p>
+                            {% endif %}
+                            <div class="mt-auto">
+                                <div class="price-tag">{{ eq|daily_price:request|intcomma }} FCFA<span>/jour</span></div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <a href="{% url 'equipment:detail' eq.slug %}" class="btn btn-primary-gold btn-sm flex-fill">
+                                        <i class="fas fa-eye me-1"></i>Détails
+                                    </a>
+                                    {% if eq.latitude and eq.longitude %}
+                                    <a href="{% url 'equipment:map' %}?focus={{ eq.id }}" class="btn btn-outline-secondary btn-sm" title="Localiser sur la carte">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5>Aucun matériel trouvé</h5>
+                    <p class="text-muted">Essayez de modifier vos critères de recherche.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

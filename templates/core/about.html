@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}À propos - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="page-header py-5">
+    <div class="container text-center">
+        <h1 class="text-white">À propos de RAOLY BTP</h1>
+        <p class="text-light">Votre partenaire de confiance en location de matériels de chantier</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-5 align-items-center">
+        <div class="col-lg-6">
+            <img src="{% static 'images/logo.png' %}" alt="RAOLY BTP" class="img-fluid" style="max-height:300px;">
+        </div>
+        <div class="col-lg-6">
+            <h2 class="section-title">Qui sommes-nous ?</h2>
+            {% if site_info and site_info.about_text %}
+            <p>{{ site_info.about_text }}</p>
+            {% else %}
+            <p>RAOLY BTP est une entreprise spécialisée dans la location de matériels et engins de chantier. Nous mettons à votre disposition une large gamme d'équipements de qualité pour tous vos projets de construction.</p>
+            <p>Notre plateforme innovante vous permet de :</p>
+            <ul>
+                <li>Rechercher et réserver des matériels en ligne</li>
+                <li>Géolocaliser les équipements disponibles sur une carte</li>
+                <li>Payer en toute sécurité via Notch Pay</li>
+                <li>Obtenir des contrats générés automatiquement</li>
+                <li>Commander un chauffeur professionnel pour vos engins</li>
+            </ul>
+            <p>Toutes nos transactions sont sécurisées par la technologie blockchain, garantissant transparence et traçabilité.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Cartes : même fond marine que l'accueil (le texte des .feature-card est clair) -->
+<section class="py-5 features-section mt-4">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon"><i class="fas fa-users"></i></div>
+                    <h5>Équipe expérimentée</h5>
+                    <p>Des professionnels du BTP à votre service</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon"><i class="fas fa-tools"></i></div>
+                    <h5>Matériels de qualité</h5>
+                    <p>Équipements entretenus et vérifiés régulièrement</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon"><i class="fas fa-headset"></i></div>
+                    <h5>Support 24/7</h5>
+                    <p>Assistance disponible à tout moment</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

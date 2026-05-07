@@ -1,0 +1,404 @@
+{% extends 'base.html' %}
+
+{% block title %}Centre opérationnel — RAOLY BTP{% endblock %}
+
+{% block main_attrs %}class="ops-main" style="margin-top:76px;padding:0;"{% endblock %}
+
+{% block site_footer %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Palette et typo alignées sur static/css/style.css (--gold, --navy, Inter, Space Grotesk) */
+.ops-main {
+    background: linear-gradient(160deg, var(--navy-dark) 0%, var(--navy) 45%, var(--navy-light) 100%);
+    min-height: calc(100vh - 76px);
+    position: relative;
+    overflow: hidden;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    color: rgba(255,255,255,0.92);
+}
+#opsMap { position: absolute; inset: 0; z-index: 1; background: #0e0e0e; }
+.ops-scan {
+    pointer-events: none; position: absolute; inset: 0; z-index: 2;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(232, 163, 23, 0.02) 2px, rgba(232, 163, 23, 0.02) 4px);
+    opacity: 0.45;
+}
+.ops-vignette {
+    pointer-events: none; position: absolute; inset: 0; z-index: 3;
+    box-shadow: inset 0 0 100px rgba(17, 24, 39, 0.55);
+}
+.ops-glass {
+    background: rgba(28, 35, 49, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(232, 163, 23, 0.28);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+}
+.ops-label {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-size: 0.68rem; letter-spacing: 0.14em;
+    color: var(--gold-light); text-transform: uppercase;
+}
+.ops-title {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-size: 1rem; font-weight: 700; letter-spacing: 0.06em; color: #fff;
+}
+.ops-live {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; color: var(--gold);
+}
+.ops-live-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--gold);
+    box-shadow: 0 0 12px rgba(232, 163, 23, 0.85);
+    animation: ops-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ops-pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.65;transform:scale(0.94);} }
+.ops-hud-top {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 20;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 18px; max-width: 96vw;
+}
+.ops-stat {
+    min-width: 100px; padding: 4px 10px; border-left: 3px solid var(--gold);
+}
+.ops-stat b { color: var(--gold-light); font-size: 1.08rem; font-family: 'Space Grotesk', sans-serif; }
+.ops-panel {
+    position: absolute; z-index: 20; top: 88px; bottom: 16px; width: min(300px, 32vw);
+    display: flex; flex-direction: column;
+}
+.ops-panel-left { left: 16px; }
+.ops-panel-right { right: 16px; width: min(360px, 36vw); }
+.ops-panel-h { padding: 10px 14px; border-bottom: 1px solid rgba(232, 163, 23, 0.18); }
+.ops-scroll { flex: 1; overflow-y: auto; padding: 8px 10px; }
+.ops-fleet-item {
+    padding: 8px 10px; margin-bottom: 6px; cursor: default;
+    background: rgba(17, 24, 39, 0.45);
+    border: 1px solid rgba(232, 163, 23, 0.12);
+    border-radius: 8px; font-size: 0.8rem; line-height: 1.4;
+}
+.ops-fleet-item:hover { border-color: rgba(232, 163, 23, 0.4); background: rgba(42, 53, 71, 0.55); }
+.ops-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.ops-dot-ok { background: var(--gold); box-shadow: 0 0 8px rgba(232, 163, 23, 0.7); }
+.ops-dot-warn { background: var(--gold-dark); box-shadow: 0 0 6px rgba(199, 139, 10, 0.8); }
+.ops-alert {
+    padding: 8px 10px; margin-bottom: 8px; font-size: 0.78rem; line-height: 1.45;
+    border-left: 3px solid #6c757d; background: rgba(17, 24, 39, 0.45); border-radius: 0 8px 8px 0;
+}
+.ops-alert.critical { border-left-color: #dc3545; }
+.ops-alert.warning { border-left-color: #ffc107; }
+.ops-alert.info { border-left-color: var(--gold); }
+.ops-time { color: var(--gold-light); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em; }
+.ops-radius-form input[type="number"] {
+    width: 72px; background: rgba(17, 24, 39, 0.65); border: 1px solid rgba(232, 163, 23, 0.35);
+    color: #fff; font-family: inherit; font-size: 0.8rem; padding: 5px 8px; border-radius: 8px;
+}
+.ops-radius-form button {
+    background: var(--gold); border: none; color: #000;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+    padding: 6px 12px; border-radius: 25px; cursor: pointer;
+}
+.ops-radius-form button:hover { background: var(--gold-dark); color: #fff; }
+.ops-track {
+    font-size: 0.72rem; line-height: 1.35; color: rgba(255,255,255,0.82);
+    word-break: break-all;
+}
+.ops-track a { color: var(--gold-light); }
+.ops-track button {
+    margin-top: 6px; font-size: 0.65rem; padding: 4px 8px; border-radius: 6px;
+    background: rgba(232, 163, 23, 0.25); border: 1px solid rgba(232, 163, 23, 0.45);
+    color: #fff; cursor: pointer;
+}
+@media (max-width: 991px) {
+    .ops-panel { position: relative; top: auto; bottom: auto; width: 100%; max-height: 220px; margin: 12px; }
+    .ops-hud-top { position: relative; transform: none; left: auto; margin: 0 auto; justify-content: center; }
+    #opsMap { position: relative; height: 55vh; }
+    .ops-main { min-height: auto; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ops-main">
+    <div id="opsMap" aria-label="Carte opérationnelle"></div>
+    <div class="ops-scan"></div>
+    <div class="ops-vignette"></div>
+
+    <div class="ops-hud-top ops-glass">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div>
+                <div class="ops-label">RAOLY BTP</div>
+                <div class="ops-title">Suivi opérationnel</div>
+            </div>
+            <div class="ops-live"><span class="ops-live-dot"></span> Temps réel (API + GPS live)</div>
+            <div class="ops-time" id="opsClock">--:--:--</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-end ms-auto">
+            <div class="ops-stat ops-glass px-2 py-1">
+                <div class="ops-label">ASSETS</div>
+                <b>{{ stats.fleet_total }}</b>
+            </div>
+            <div class="ops-stat ops-glass px-2 py-1">
+                <div class="ops-label">LOC ACTIVES</div>
+                <b>{{ stats.rentals_window }}</b>
+            </div>
+            <div class="ops-stat ops-glass px-2 py-1">
+                <div class="ops-label">ALERTES</div>
+                <b>{{ stats.alerts_count }}</b>
+            </div>
+            <form method="get" class="ops-radius-form d-flex align-items-center gap-2 ops-glass px-2 py-1">
+                <label class="ops-label mb-0">RAYON km</label>
+                <input type="number" name="radius_km" step="0.1" min="0.1" max="200" value="{{ radius_km }}">
+                <button type="submit">APPLIQUER</button>
+            </form>
+        </div>
+    </div>
+
+    <aside class="ops-panel ops-panel-left ops-glass">
+        <div class="ops-panel-h">
+            <div class="ops-label">Flotte</div>
+            <div class="ops-title">UNITÉS SUIVIES</div>
+        </div>
+        <div class="ops-scroll" id="trackingLinksPanel"></div>
+        <div class="ops-scroll" id="fleetList"></div>
+    </aside>
+
+    <aside class="ops-panel ops-panel-right ops-glass">
+        <div class="ops-panel-h d-flex justify-content-between align-items-center">
+            <div>
+                <div class="ops-label">Centre d’alertes</div>
+                <div class="ops-title">SOC FEED</div>
+            </div>
+        </div>
+        <div class="ops-scroll" id="alertFeed"></div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const FLEET = {{ fleet_json|safe }};
+    const DEVIATIONS = {{ deviation_markers_json|safe }};
+    const ALERTS = {{ alerts_json|safe }};
+    const TRACKING_LINKS = {{ tracking_links_json|safe }};
+    const POSITIONS_URL = "{{ positions_poll_url|escapejs }}";
+
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tickClock() {
+        const el = document.getElementById('opsClock');
+        if (!el) return;
+        const d = new Date();
+        el.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
+
+    const mapEl = document.getElementById('opsMap');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    const map = L.map('opsMap', { zoomControl: true, attributionControl: true, scrollWheelZoom: false }).setView([4.0511, 9.7679], 8);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    const fleetLayer = L.layerGroup().addTo(map);
+    const devLayer = L.layerGroup().addTo(map);
+
+    const markerById = {};
+    const deviationTracks = [];
+    const hasEverBeenLive = {};
+    let focusedEquipmentId = null;
+    const MAX_FOCUS_ZOOM = Math.min((map.getMaxZoom && map.getMaxZoom()) || 20, 20);
+
+    function fmtCoord(n) {
+        const x = Number(n);
+        if (!isFinite(x)) return '—';
+        return x.toFixed(6);
+    }
+
+    function buildFleetPopupHtml(u) {
+        const posLine = '<span style="color:#444">Position actuelle : ' + fmtCoord(u.base_lat) + ', ' + fmtCoord(u.base_lng) + '</span><br>';
+        return (
+            '<strong style="color:#1C2331">' + u.name + '</strong><br>' +
+            '<span style="color:#444">' + (u.category || '—') + '</span><br>' +
+            (u.has_live ? '<span style="color:#15803d">GPS live' + (u.live_age_sec != null ? ' · il y a ' + u.live_age_sec + ' s' : '') + '</span><br>' : '') +
+            posLine +
+            (u.has_fix ? '' : '<span style="color:#C78B0A">Position indisponible (fallback hub)</span><br>')
+        );
+    }
+
+    const bounds = [];
+    FLEET.forEach(function(u) {
+        const pos = [u.base_lat, u.base_lng];
+        const navy = '#1C2331';
+        const color = u.has_live ? '#4ade80' : (u.has_fix ? '#E8A317' : '#C78B0A');
+        const m = L.circleMarker(pos, {
+            radius: 6,
+            color: navy,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: 0.92
+        });
+        m.bindPopup(buildFleetPopupHtml(u));
+        m.addTo(fleetLayer);
+        markerById[u.id] = { marker: m, baseLat: u.base_lat, baseLng: u.base_lng };
+        bounds.push(pos);
+    });
+
+    DEVIATIONS.forEach(function(m) {
+        const declPos = m.decl;
+        const currPos = [m.curr[0], m.curr[1]];
+        const a = L.circleMarker(declPos, {
+            radius: 7, color: '#1C2331', weight: 2, fillColor: '#198754', fillOpacity: 0.75
+        }).addTo(devLayer);
+        a.bindPopup('Déclaré — ' + m.equipment);
+        const b = L.circleMarker(currPos, {
+            radius: 7, color: '#1C2331', weight: 2, fillColor: '#dc3545', fillOpacity: 0.82
+        }).addTo(devLayer);
+        b.bindPopup(m.equipment + '<br>Δ ' + m.distance_km + ' km');
+        const line = L.polyline([declPos, currPos], {
+            color: '#E8A317', weight: 3, opacity: 0.75, dashArray: '8 10'
+        }).addTo(devLayer);
+        deviationTracks.push({
+            marker: b,
+            line: line,
+            decl: declPos,
+            baseCurr: m.curr,
+            resId: m.reservation_id,
+        });
+        bounds.push(m.decl, m.curr);
+    });
+
+    if (bounds.length) {
+        try { map.fitBounds(bounds, { padding: [56, 56], maxZoom: 12 }); } catch (e) {}
+    }
+
+    function applyFleetPositions(fleet) {
+        fleet.forEach(function(u) {
+            const o = markerById[u.id];
+            if (!o) return;
+            o.baseLat = u.base_lat;
+            o.baseLng = u.base_lng;
+            o.marker.setLatLng([u.base_lat, u.base_lng]);
+            const color = u.has_live ? '#4ade80' : (u.has_fix ? '#E8A317' : '#C78B0A');
+            o.marker.setStyle({ fillColor: color });
+            o.marker.bindPopup(buildFleetPopupHtml(u));
+
+            // Dès qu'un téléphone commence à émettre (premier GPS live), focus carte avec zoom max.
+            if (u.has_live && !hasEverBeenLive[u.id]) {
+                hasEverBeenLive[u.id] = true;
+                if (!focusedEquipmentId || focusedEquipmentId === u.id) {
+                    map.setView(o.marker.getLatLng(), MAX_FOCUS_ZOOM, { animate: true });
+                    o.marker.openPopup();
+                }
+            }
+        });
+    }
+
+    function applyDeviations(devs) {
+        const byRes = {};
+        devs.forEach(function(m) { byRes[m.reservation_id] = m; });
+        deviationTracks.forEach(function(item) {
+            const m = byRes[item.resId];
+            if (!m) return;
+            item.baseCurr = m.curr;
+            item.marker.setLatLng(m.curr);
+            item.line.setLatLngs([item.decl, m.curr]);
+        });
+    }
+
+    function renderAlerts(alerts) {
+        const alertFeed = document.getElementById('alertFeed');
+        if (!alertFeed) return;
+        alertFeed.innerHTML = '';
+        alerts.forEach(function(a) {
+            const div = document.createElement('div');
+            div.className = 'ops-alert ' + (a.severity === 'critical' ? 'critical' : (a.severity === 'warning' ? 'warning' : 'info'));
+            div.innerHTML =
+                '<div class="d-flex justify-content-between gap-2">' +
+                '<strong style="color:#fff; letter-spacing:0.04em">' + a.title + '</strong>' +
+                '<span class="ops-time">' + a.time + '</span></div>' +
+                '<div class="mt-1" style="color:rgba(255,255,255,0.78)">' + a.body + '</div>';
+            alertFeed.appendChild(div);
+        });
+    }
+
+    function pollPositions() {
+        fetch(POSITIONS_URL, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.fleet) applyFleetPositions(data.fleet);
+                if (data.deviations) applyDeviations(data.deviations);
+                if (data.alerts) renderAlerts(data.alerts);
+            })
+            .catch(function() {});
+    }
+    renderAlerts(ALERTS);
+    setInterval(pollPositions, 4000);
+
+    const trackingPanel = document.getElementById('trackingLinksPanel');
+    if (trackingPanel) {
+        const head = document.createElement('div');
+        head.className = 'ops-panel-h';
+        head.innerHTML = '<div class="ops-label">Terrain</div><div class="ops-title">LIEN CHAUFFEUR</div>';
+        trackingPanel.appendChild(head);
+        if (TRACKING_LINKS.length) {
+            TRACKING_LINKS.forEach(function(t) {
+                const box = document.createElement('div');
+                box.className = 'ops-fleet-item ops-track';
+                const a = document.createElement('a');
+                a.href = t.url;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.textContent = t.url;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = 'Copier le lien';
+                btn.addEventListener('click', function() {
+                    if (navigator.clipboard) navigator.clipboard.writeText(t.url);
+                });
+                box.innerHTML = '<strong>#' + t.reservation_id + '</strong> ' + (t.equipment || '') + '<br>' +
+                    '<small style="opacity:0.7">' + (t.user || '') + '</small><br>';
+                box.appendChild(a);
+                box.appendChild(document.createElement('br'));
+                box.appendChild(btn);
+                trackingPanel.appendChild(box);
+            });
+        } else {
+            const empty = document.createElement('div');
+            empty.className = 'p-2 small';
+            empty.style.opacity = '0.65';
+            empty.textContent = 'Aucune location dans la fenêtre du jour.';
+            trackingPanel.appendChild(empty);
+        }
+    }
+
+    const fleetList = document.getElementById('fleetList');
+    if (fleetList) {
+        fleetList.innerHTML = '';
+        FLEET.forEach(function(u) {
+            const div = document.createElement('div');
+            div.className = 'ops-fleet-item';
+            div.innerHTML =
+                '<span class="ops-dot ' + (u.has_live ? 'ops-dot-ok' : (u.has_fix ? 'ops-dot-ok' : 'ops-dot-warn')) + '"></span>' +
+                '<strong style="color:#fff">' + u.name + '</strong><br>' +
+                '<span style="color:rgba(255,255,255,0.55)">' + (u.category || '—') + '</span>' +
+                (u.is_available ? '' : ' · <span style="color:#dc3545">Indisponible</span>');
+            div.addEventListener('click', function() {
+                focusedEquipmentId = u.id;
+                const o = markerById[u.id];
+                if (o) {
+                    map.setView(o.marker.getLatLng(), MAX_FOCUS_ZOOM, { animate: true });
+                    o.marker.openPopup();
+                }
+            });
+            fleetList.appendChild(div);
+        });
+    }
+
+})();
+</script>
+{% endblock %}

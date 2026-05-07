@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inscription - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="container">
+        <div class="row justify-content-center align-items-center py-5">
+            <div class="col-md-6">
+                <div class="auth-card card shadow-lg">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <img src="{% static 'images/logo.png' %}" alt="RAOLY BTP" height="70" class="mb-3">
+                            <h3 class="text-dark-nav">Créer un compte</h3>
+                            <p class="text-muted">Rejoignez RAOLY BTP pour louer vos matériels</p>
+                        </div>
+                        <form method="POST">
+                            {% csrf_token %}
+                            {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Veuillez corriger les erreurs ci-dessous.
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                    <br><small>{{ field.label }}: {{ error }}</small>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                <br><small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Prénom</label>
+                                    {{ form.first_name }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Nom</label>
+                                    {{ form.last_name }}
+                                </div>
+                            </div>
+                            <div class="mb-3 mt-3">
+                                <label class="form-label fw-bold">Nom d'utilisateur</label>
+                                {{ form.username }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Email</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Téléphone</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold d-block">Type de compte</label>
+                                {{ form.user_type }}
+                                {% if form.user_type.errors %}
+                                <div class="text-danger small">{{ form.user_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Mot de passe</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                        {{ form.password1 }}
+                                        <button type="button" class="btn btn-outline-secondary password-toggle-btn" aria-label="Afficher le mot de passe">
+                                            <i class="fas fa-eye" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Confirmer</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                        {{ form.password2 }}
+                                        <button type="button" class="btn btn-outline-secondary password-toggle-btn" aria-label="Afficher le mot de passe">
+                                            <i class="fas fa-eye" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3 form-check">
+                                {{ form.accept_personal_data_processing }}
+                                <label class="form-check-label small" for="{{ form.accept_personal_data_processing.id_for_label }}">
+                                    {{ form.accept_personal_data_processing.label }}
+                                </label>
+                                {% if form.accept_personal_data_processing.errors %}
+                                <div class="text-danger small">{{ form.accept_personal_data_processing.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="btn btn-primary-gold w-100 btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Créer mon compte
+                            </button>
+                        </form>
+                        <hr>
+                        <p class="text-center mb-0">
+                            Déjà inscrit ? <a href="{% url 'accounts:login' %}" class="text-gold fw-bold">Se connecter</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

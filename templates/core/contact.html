@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="page-header py-5">
+    <div class="container text-center">
+        <h1 class="text-white">Contactez-nous</h1>
+        <p class="text-light">Une question ? N'hésitez pas à nous contacter</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-5">
+        <div class="col-lg-6">
+            <h3 class="section-title mb-4">Nos coordonnées</h3>
+            {% if site_info %}
+            <div class="contact-info-list">
+                {% if site_info.phone %}
+                <div class="contact-info-item d-flex align-items-center mb-4">
+                    <div class="contact-icon"><i class="fas fa-phone"></i></div>
+                    <div class="ms-3">
+                        <strong>Téléphone</strong>
+                        <p class="mb-0">{{ site_info.phone }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if site_info.email %}
+                <div class="contact-info-item d-flex align-items-center mb-4">
+                    <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                    <div class="ms-3">
+                        <strong>Email</strong>
+                        <p class="mb-0">{{ site_info.email }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if site_info.address %}
+                <div class="contact-info-item d-flex align-items-center mb-4">
+                    <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
+                    <div class="ms-3">
+                        <strong>Adresse</strong>
+                        <p class="mb-0">{{ site_info.address }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                {% if site_info.whatsapp %}
+                <div class="contact-info-item d-flex align-items-center mb-4">
+                    <div class="contact-icon bg-success"><i class="fab fa-whatsapp"></i></div>
+                    <div class="ms-3">
+                        <strong>WhatsApp</strong>
+                        <p class="mb-0"><a href="https://wa.me/{{ site_info.whatsapp }}">{{ site_info.whatsapp }}</a></p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-muted">Coordonnées non configurées. Contactez l'administrateur.</p>
+            {% endif %}
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h4 class="mb-4">Envoyer un message</h4>
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">Nom complet</label>
+                            <input type="text" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sujet</label>
+                            <input type="text" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Message</label>
+                            <textarea class="form-control" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary-gold w-100">
+                            <i class="fas fa-paper-plane me-2"></i>Envoyer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load pricing %}
+
+{% block main_attrs %}style="margin-top: 0;"{% endblock %}
+
+{% block content %}
+<!-- Hero Carousel -->
+<section id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+        {% for slide in slides %}
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %}></button>
+        {% empty %}
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="3"></button>
+        {% endfor %}
+    </div>
+    <div class="carousel-inner">
+        {% for slide in slides %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+            <div class="hero-slide" style="background-image: url('{{ slide.image.url }}');">
+                <div class="hero-overlay">
+                    <div class="container h-100 d-flex align-items-center justify-content-center">
+                        <div class="hero-content text-white text-center">
+                            <h1 class="hero-title animate-fade-in">{{ slide.title }}</h1>
+                            <p class="hero-subtitle animate-fade-in-delay">{{ slide.subtitle }}</p>
+                            <a href="{{ slide.button_link }}" class="btn btn-primary-gold btn-lg animate-fade-in-delay2">{{ slide.button_text }} <i class="fas fa-arrow-right ms-2"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="carousel-item active">
+            <div class="hero-slide" style="background-image: url('{% static 'images/hero1.jpg' %}');">
+                <div class="hero-overlay">
+                    <div class="container h-100 d-flex align-items-center justify-content-center">
+                        <div class="hero-content text-white text-center">
+                            <h1 class="hero-title animate-fade-in">RAOLY BTP - Location de Matériels de Chantier</h1>
+                            <p class="hero-subtitle animate-fade-in-delay">Louez vos engins et matériels de chantier en toute simplicité. Paiement sécurisé, contrats générés automatiquement.</p>
+                            <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold btn-lg animate-fade-in-delay2">Découvrir nos matériels <i class="fas fa-arrow-right ms-2"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="carousel-item">
+            <div class="hero-slide" style="background-image: url('{% static 'images/hero2.jpg' %}');">
+                <div class="hero-overlay">
+                    <div class="container h-100 d-flex align-items-center justify-content-center">
+                        <div class="hero-content text-white text-center">
+                            <h1 class="hero-title">Des engins fiables pour vos chantiers</h1>
+                            <p class="hero-subtitle">Pelleteuses, grues, bétonnières et plus encore. Tous géolocalisés.</p>
+                            <a href="{% url 'equipment:map' %}" class="btn btn-primary-gold btn-lg">Voir sur la carte <i class="fas fa-map-marked-alt ms-2"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="carousel-item">
+            <div class="hero-slide" style="background-image: url('{% static 'images/hero3.jpg' %}');">
+                <div class="hero-overlay">
+                    <div class="container h-100 d-flex align-items-center justify-content-center">
+                        <div class="hero-content text-white text-center">
+                            <h1 class="hero-title">Paiement sécurisé via Notch Pay</h1>
+                            <p class="hero-subtitle">Payez en toute sécurité. Transactions vérifiées par blockchain.</p>
+                            <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold btn-lg">Commencer <i class="fas fa-shield-alt ms-2"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="carousel-item">
+            <div class="hero-slide" style="background-image: url('{% static 'images/hero4.jpg' %}');">
+                <div class="hero-overlay">
+                    <div class="container h-100 d-flex align-items-center justify-content-center">
+                        <div class="hero-content text-white text-center">
+                            <h1 class="hero-title">Chauffeurs professionnels disponibles</h1>
+                            <p class="hero-subtitle">Commandez un chauffeur qualifié pour vos engins conductibles.</p>
+                            <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold btn-lg">Explorer <i class="fas fa-hard-hat ms-2"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+    </button>
+</section>
+
+<!-- Quick Actions -->
+<section class="home-quick-actions">
+    <div class="container">
+        <div class="quick-actions-wrap">
+            <div class="quick-actions-left">
+                <p class="quick-kicker mb-1">Démarrage rapide</p>
+                <h3 class="quick-title mb-0">Accédez à l'essentiel en un clic</h3>
+            </div>
+            <div class="quick-actions-right">
+                <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold">
+                    <i class="fas fa-search me-2"></i>Louer un matériel
+                </a>
+                <a href="{% url 'equipment:map' %}" class="btn btn-outline-gold">
+                    <i class="fas fa-map-marked-alt me-2"></i>Voir la carte
+                </a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'accounts:dashboard' %}" class="btn btn-outline-light">
+                    <i class="fas fa-tachometer-alt me-2"></i>Mon tableau de bord
+                </a>
+                {% else %}
+                <a href="{% url 'accounts:register' %}" class="btn btn-outline-light">
+                    <i class="fas fa-user-plus me-2"></i>Créer un compte
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5 features-section">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-md-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-map-marked-alt"></i></div>
+                    <h5>Géolocalisation</h5>
+                    <p>Localisez les matériels sur la carte en temps réel</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h5>Blockchain</h5>
+                    <p>Transactions sécurisées et vérifiables</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-file-contract"></i></div>
+                    <h5>Contrats auto</h5>
+                    <p>Contrats générés automatiquement après paiement</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-hard-hat"></i></div>
+                    <h5>Chauffeurs</h5>
+                    <p>Chauffeurs professionnels sur demande</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works-section py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Comment ça marche</h2>
+        <div class="how-steps">
+            <div class="how-step">
+                <div class="how-step-num">1</div>
+                <h6>Choisissez le matériel</h6>
+                <p>Parcourez le catalogue et comparez les prix par jour.</p>
+            </div>
+            <div class="how-step">
+                <div class="how-step-num">2</div>
+                <h6>Déclarez l'emplacement</h6>
+                <p>Placez précisément l'engin sur la carte avant paiement.</p>
+            </div>
+            <div class="how-step">
+                <div class="how-step-num">3</div>
+                <h6>Payez en sécurité</h6>
+                <p>Paiement Notch Pay et validation blockchain instantanée.</p>
+            </div>
+            <div class="how-step">
+                <div class="how-step-num">4</div>
+                <h6>Téléchargez le contrat</h6>
+                <p>Contrat PDF généré automatiquement après confirmation.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Slider -->
+{% if categories %}
+<section class="py-5 bg-light categories-section">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="section-title mb-2">Nos Catégories</h2>
+            <p class="text-muted mb-0">Choisissez rapidement le type d'engin adapté à votre chantier.</p>
+        </div>
+        <div class="categories-slider">
+            <button class="slider-btn slider-prev" onclick="slideCategories(-1)"><i class="fas fa-chevron-left"></i></button>
+            <div class="categories-track" id="categoriesTrack">
+                {% for cat in categories %}
+                <a href="{% url 'equipment:list' %}?category={{ cat.id }}" class="category-slide text-decoration-none">
+                    <div class="category-badge">Catégorie</div>
+                    <div class="category-icon">
+                        <i class="{{ cat.icon|default:'fas fa-tools' }}"></i>
+                    </div>
+                    <span class="category-name">{{ cat.name }}</span>
+                    {% if cat.description %}
+                    <small class="category-desc">{{ cat.description|truncatewords:8 }}</small>
+                    {% else %}
+                    <small class="category-desc">Matériels professionnels disponibles</small>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            <button class="slider-btn slider-next" onclick="slideCategories(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Featured Equipment -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Matériels Disponibles</h2>
+        <div class="row g-4">
+            {% for eq in featured_equipments %}
+            <div class="col-md-6 col-lg-3">
+                <div class="equipment-card card h-100">
+                    <div class="card-img-wrapper">
+                        {% if eq.image %}
+                        <img src="{{ eq.image.url }}" class="card-img-top" alt="{{ eq.name }}">
+                        {% else %}
+                        <div class="card-img-placeholder"><i class="fas fa-truck-loading"></i></div>
+                        {% endif %}
+                        <span class="badge-condition badge-{{ eq.condition }}">{{ eq.get_condition_display }}</span>
+                        {% if eq.requires_driver %}
+                        <span class="badge-driver"><i class="fas fa-hard-hat"></i> Chauffeur dispo</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <span class="equipment-category">{{ eq.category.name }}</span>
+                        <h5 class="card-title">{{ eq.name }}</h5>
+                        <p class="card-text text-muted small">{{ eq.description|truncatewords:15 }}</p>
+                        <div class="mt-auto">
+                            <div class="price-tag">{{ eq|daily_price:request|intcomma }} FCFA<span>/jour</span></div>
+                            <div class="d-flex gap-2 mt-2">
+                                <a href="{% url 'equipment:detail' eq.slug %}" class="btn btn-primary-gold btn-sm flex-fill">Détails</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-truck-loading fa-3x text-muted mb-3"></i>
+                <h5>Aucun matériel disponible pour le moment</h5>
+                <p class="text-muted">Les matériels seront bientôt ajoutés. Revenez bientôt !</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% if featured_equipments %}
+        <div class="text-center mt-4">
+            <a href="{% url 'equipment:list' %}" class="btn btn-outline-gold btn-lg">Voir tous les matériels <i class="fas fa-arrow-right ms-2"></i></a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-card">
+            <div class="row align-items-center">
+                <div class="col-lg-7 text-center text-lg-start mb-4 mb-lg-0">
+                    <span class="cta-kicker">RAOLY BTP</span>
+                    <h2 class="cta-title">Prêt à lancer votre chantier en toute sérénité ?</h2>
+                    <p class="cta-text">Réservez vos engins en quelques clics, déclarez l'emplacement d'utilisation, payez en sécurité et recevez votre contrat instantanément.</p>
+                    <div class="cta-stats d-flex justify-content-center justify-content-lg-start gap-4 mt-3">
+                        <div class="cta-stat">
+                            <span class="cta-stat-number">500+</span>
+                            <span class="cta-stat-label">Matériels</span>
+                        </div>
+                        <div class="cta-stat">
+                            <span class="cta-stat-number">7j/7</span>
+                            <span class="cta-stat-label">Support</span>
+                        </div>
+                        <div class="cta-stat">
+                            <span class="cta-stat-number">100%</span>
+                            <span class="cta-stat-label">Sécurisé</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-center">
+                    <div class="cta-actions">
+                        {% if not user.is_authenticated %}
+                        <a href="{% url 'accounts:register' %}" class="btn btn-primary-gold btn-lg w-100 mb-3">
+                            <i class="fas fa-user-plus me-2"></i>Créer un compte gratuit
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'equipment:list' %}" class="btn btn-outline-light btn-lg w-100">
+                            <i class="fas fa-search me-2"></i>Explorer le catalogue
+                        </a>
+                        <a href="{% url 'equipment:map' %}" class="btn btn-outline-gold btn-lg w-100 mt-2">
+                            <i class="fas fa-map-marked-alt me-2"></i>Voir les engins sur la carte
+                        </a>
+                        <p class="cta-secure mt-3 mb-0">
+                            <i class="fas fa-shield-alt me-1"></i>Blockchain
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-lock me-1"></i>Notch Pay
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-file-contract me-1"></i>Contrat auto
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

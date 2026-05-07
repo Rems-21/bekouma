@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+{% load pricing %}
+
+{% block title %}{{ equipment.name }} - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'equipment:list' %}">Matériels</a></li>
+            <li class="breadcrumb-item active">{{ equipment.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Images -->
+        <div class="col-lg-6">
+            <div class="equipment-gallery">
+                <div class="main-image mb-3">
+                    {% if equipment.image %}
+                    <img src="{{ equipment.image.url }}" class="img-fluid rounded" id="mainImage" alt="{{ equipment.name }}">
+                    {% else %}
+                    <div class="no-image-placeholder rounded"><i class="fas fa-truck-loading fa-5x"></i></div>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2 thumb-row">
+                    {% if equipment.image %}
+                    <img src="{{ equipment.image.url }}" class="img-thumbnail thumb-img active" onclick="changeImage(this)" alt="">
+                    {% endif %}
+                    {% if equipment.image2 %}
+                    <img src="{{ equipment.image2.url }}" class="img-thumbnail thumb-img" onclick="changeImage(this)" alt="">
+                    {% endif %}
+                    {% if equipment.image3 %}
+                    <img src="{{ equipment.image3.url }}" class="img-thumbnail thumb-img" onclick="changeImage(this)" alt="">
+                    {% endif %}
+                    {% if equipment.image4 %}
+                    <img src="{{ equipment.image4.url }}" class="img-thumbnail thumb-img" onclick="changeImage(this)" alt="">
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if equipment.latitude != 0 and equipment.longitude != 0 %}
+            <div class="mt-4">
+                <h5><i class="fas fa-map-marker-alt me-2 text-gold"></i>Localisation</h5>
+                <div id="equipmentMap" style="height: 300px; border-radius: 12px; border: 2px solid #eee; z-index: 1;"></div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    {% if equipment.location_name %}
+                    <p class="text-muted small mb-0"><i class="fas fa-map-pin me-1"></i>{{ equipment.location_name }}</p>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-gold" onclick="getDetailRoute()" id="routeBtn">
+                        <i class="fas fa-route me-1"></i>Itinéraire
+                    </button>
+                </div>
+                <div id="detailRouteInfo" class="mt-2 p-2 rounded d-none" style="background:var(--navy);color:#fff;">
+                    <div class="d-flex justify-content-around text-center">
+                        <div><span class="fw-bold text-gold" id="detailDist">--</span><br><small style="color:rgba(255,255,255,.6);">Distance</small></div>
+                        <div><span class="fw-bold text-gold" id="detailDur">--</span><br><small style="color:rgba(255,255,255,.6);">Durée</small></div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Details -->
+        <div class="col-lg-6">
+            <span class="badge bg-gold mb-2">{{ equipment.category.name }}</span>
+            <h2 class="mb-2">{{ equipment.name }}</h2>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="badge-condition-lg badge-{{ equipment.condition }}">{{ equipment.get_condition_display }}</span>
+                <span class="text-muted">Réf: #{{ equipment.pk }}</span>
+            </div>
+
+            <div class="price-display mb-4">
+                <span class="price-amount">{{ equipment|daily_price:request|intcomma }} FCFA</span>
+                <span class="price-period">/ jour</span>
+            </div>
+
+            {% if equipment.requires_driver %}
+            <div class="alert alert-info-custom mb-3">
+                <i class="fas fa-hard-hat me-2"></i>
+                <strong>Chauffeur disponible</strong> - {{ equipment.driver_price_per_day|intcomma }} FCFA/jour
+            </div>
+            {% endif %}
+
+            <div class="mb-4">
+                <h5>Description</h5>
+                <p>{{ equipment.description }}</p>
+            </div>
+
+            <div class="detail-specs mb-4">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="spec-item">
+                            <i class="fas fa-check-circle text-gold"></i>
+                            <span>État: {{ equipment.get_condition_display }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="spec-item">
+                            <i class="fas fa-boxes text-gold"></i>
+                            <span>Quantité: {{ equipment.quantity_total }}</span>
+                        </div>
+                    </div>
+                    {% if equipment.requires_driver %}
+                    <div class="col-6">
+                        <div class="spec-item">
+                            <i class="fas fa-hard-hat text-gold"></i>
+                            <span>Chauffeur: Disponible</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if equipment.location_name %}
+                    <div class="col-6">
+                        <div class="spec-item">
+                            <i class="fas fa-map-marker-alt text-gold"></i>
+                            <span>{{ equipment.location_name }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Calendar -->
+            <div class="mb-4">
+                <h5><i class="fas fa-calendar-alt me-2 text-gold"></i>Disponibilité</h5>
+                <div id="availabilityCalendar"></div>
+            </div>
+
+            <!-- Add to Cart Form -->
+            {% if user.is_authenticated %}
+            {% if user_can_rent %}
+            <form method="POST" action="{% url 'cart:add' equipment.id %}" class="add-to-cart-form">
+                {% csrf_token %}
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Date de prise</label>
+                        <input type="text" name="rental_date" id="rentalDate" class="form-control datepicker" placeholder="Sélectionner" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Date de retour</label>
+                        <input type="text" name="return_date" id="returnDate" class="form-control datepicker" placeholder="Sélectionner" required>
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Quantité</label>
+                        <input type="number" name="quantity" id="quantityInput" class="form-control" value="1" min="1" max="{{ equipment.quantity_total }}">
+                    </div>
+                    {% if equipment.requires_driver %}
+                    <div class="col-6 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="with_driver" id="withDriver">
+                            <label class="form-check-label" for="withDriver">
+                                Avec chauffeur (+{{ equipment.driver_price_per_day|intcomma }} FCFA/jour)
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-gold flex-fill">
+                        <i class="fas fa-cart-plus me-2"></i>Ajouter au panier
+                    </button>
+                    <button type="submit" formaction="{% url 'cart:add' equipment.id %}?redirect=checkout" class="btn btn-primary-gold flex-fill">
+                        <i class="fas fa-credit-card me-2"></i>Payer maintenant
+                    </button>
+                </div>
+                <div id="rentalTotalBox" class="alert alert-light border shadow-sm mt-3 mb-0 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                    <div>
+                        <div class="small text-muted mb-1">Durée</div>
+                        <div id="rentalDaysText" class="fw-semibold">-- jours</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small text-muted mb-1">Total estimé</div>
+                        <div id="rentalTotalText" class="fw-semibold">{{ daily_price_js|floatformat:0|intcomma }} FCFA / jour</div>
+                    </div>
+                </div>
+            </form>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-id-card me-2"></i>
+                <strong>Vérification d’identité requise.</strong>
+                Complétez votre <a href="{% url 'accounts:kyc' %}" class="fw-bold">KYC</a> pour ajouter ce matériel au panier.
+                {% if user_kyc_status == 'pending_review' %}<span class="d-block small mt-1">Votre dossier est en cours d’examen.</span>{% endif %}
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                <a href="{% url 'accounts:login' %}?next={{ request.path }}">Connectez-vous</a> pour louer ce matériel.
+            </div>
+            {% endif %}
+
+            <!-- Cancellation Policy -->
+            <div class="cancellation-policy mt-4">
+                <h6><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Politique d'annulation</h6>
+                <ul class="list-unstyled small">
+                    <li><i class="fas fa-check text-success me-1"></i>3 jours avant : remboursement de 90%</li>
+                    <li><i class="fas fa-minus text-warning me-1"></i>2 jours avant : remboursement de 50%</li>
+                    <li><i class="fas fa-times text-danger me-1"></i>1 jour avant ou moins : aucun remboursement</li>
+                </ul>
+                <p class="small text-muted"><i class="fas fa-clock me-1"></i>Caution retard : 2% du montant par jour de retard</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Equipment -->
+    {% if related_equipments %}
+    <section class="mt-5">
+        <h3 class="section-title mb-4">Matériels similaires</h3>
+        <div class="row g-4">
+            {% for eq in related_equipments %}
+            <div class="col-md-6 col-lg-3">
+                <div class="equipment-card card h-100">
+                    <div class="card-img-wrapper">
+                        {% if eq.image %}
+                        <img src="{{ eq.image.url }}" class="card-img-top" alt="{{ eq.name }}">
+                        {% endif %}
+                        <span class="badge-condition badge-{{ eq.condition }}">{{ eq.get_condition_display }}</span>
+                    </div>
+                    <div class="card-body">
+                        <h6>{{ eq.name }}</h6>
+                        <div class="price-tag small">{{ eq|daily_price:request|intcomma }} FCFA/jour</div>
+                        <a href="{% url 'equipment:detail' eq.slug %}" class="btn btn-sm btn-outline-gold mt-2 w-100">Voir</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function changeImage(el) {
+    document.getElementById('mainImage').src = el.src;
+    document.querySelectorAll('.thumb-img').forEach(function(t) { t.classList.remove('active'); });
+    el.classList.add('active');
+}
+
+function parseYMD(ymd) {
+    // Parse une date "YYYY-MM-DD" en date locale (évite les décalages UTC).
+    if (!ymd || typeof ymd !== 'string') return null;
+    const parts = ymd.split('-').map(Number);
+    if (parts.length !== 3) return null;
+    const [y, m, d] = parts;
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+function calcNumDays(rentalDate, returnDate) {
+    if (!rentalDate || !returnDate) return null;
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const diffDays = Math.round((returnDate - rentalDate) / msPerDay);
+    return Math.max(1, diffDays);
+}
+
+function updateRentalTotal() {
+    const rentalEl = document.getElementById('rentalDate');
+    const returnEl = document.getElementById('returnDate');
+    const qtyEl = document.getElementById('quantityInput');
+    const driverEl = document.getElementById('withDriver');
+    const daysTextEl = document.getElementById('rentalDaysText');
+    const totalTextEl = document.getElementById('rentalTotalText');
+    if (!rentalEl || !returnEl || !qtyEl || !daysTextEl || !totalTextEl) return;
+
+    const rental = parseYMD(rentalEl.value);
+    const ret = parseYMD(returnEl.value);
+    const numDays = calcNumDays(rental, ret);
+    if (!numDays) {
+        daysTextEl.textContent = '-- jours';
+        totalTextEl.textContent = '{{ daily_price_js|floatformat:0|intcomma }} FCFA / jour';
+        return;
+    }
+
+    const quantity = Math.max(1, parseInt(qtyEl.value || '1', 10) || 1);
+    const pricePerDay = {{ daily_price_js|unlocalize }};
+    const driverPricePerDay = {{ equipment.driver_price_per_day|default:"0"|unlocalize }};
+    const requiresDriver = {{ equipment.requires_driver|yesno:'true,false' }};
+    const withDriver = requiresDriver ? !!(driverEl && driverEl.checked) : false;
+
+    const base = pricePerDay * numDays * quantity;
+    const driverCost = withDriver ? driverPricePerDay * numDays : 0;
+    const total = base + driverCost;
+
+    daysTextEl.textContent = numDays + ' jour' + (numDays > 1 ? 's' : '');
+    totalTextEl.textContent = total.toLocaleString('fr-FR') + ' FCFA';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var equipmentId = {{ equipment.pk }};
+
+    // ---- Calendrier de disponibilité (indépendant de la carte) ----
+    try {
+        var unavailableDates = [];
+        fetch('/equipements/api/availability/' + equipmentId + '/')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                unavailableDates = data.unavailable_dates || [];
+                initCalendars(unavailableDates);
+            })
+            .catch(function() { initCalendars([]); });
+    } catch(e) {
+        initCalendars([]);
+    }
+
+    // ---- Carte (indépendante du calendrier) ----
+    try {
+        initMap();
+    } catch(e) {
+        console.warn('Erreur carte:', e);
+    }
+
+    // ---- Calcul du total sur la page ----
+    try {
+        const qtyEl = document.getElementById('quantityInput');
+        const driverEl = document.getElementById('withDriver');
+        if (qtyEl) qtyEl.addEventListener('input', updateRentalTotal);
+        if (driverEl) driverEl.addEventListener('change', updateRentalTotal);
+        updateRentalTotal();
+    } catch (e) {
+        // silencieux : la page peut ne pas afficher le formulaire (cas non connecté / KYC)
+    }
+});
+
+function initCalendars(unavailableDates) {
+    try {
+        if (typeof flatpickr === 'undefined') return;
+
+        var fpConfig = {
+            locale: 'fr',
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            disable: unavailableDates || [],
+        };
+
+        var tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        var returnPicker = flatpickr('#returnDate', Object.assign({}, fpConfig, {
+            minDate: tomorrow,
+            onChange: function() {
+                updateRentalTotal();
+            }
+        }));
+
+        flatpickr('#rentalDate', Object.assign({}, fpConfig, {
+            onChange: function(dates) {
+                if (dates[0]) {
+                    var nextDay = new Date(dates[0]);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    returnPicker.set('minDate', nextDay);
+                }
+                updateRentalTotal();
+            }
+        }));
+
+        flatpickr('#availabilityCalendar', {
+            locale: 'fr',
+            inline: true,
+            minDate: 'today',
+            disable: unavailableDates || [],
+            mode: 'range',
+            onChange: function(dates) {
+                if (dates.length === 2) {
+                    document.getElementById('rentalDate').value = dates[0].toISOString().split('T')[0];
+                    document.getElementById('returnDate').value = dates[1].toISOString().split('T')[0];
+                    updateRentalTotal();
+                }
+            }
+        });
+    } catch(e) {
+        console.warn('Erreur calendrier:', e);
+    }
+}
+
+function initMap() {
+    if (typeof L === 'undefined') return;
+
+    var mapEl = document.getElementById('equipmentMap');
+    if (!mapEl) return;
+
+    var lat = {{ equipment.latitude|default:"0"|unlocalize }};
+    var lng = {{ equipment.longitude|default:"0"|unlocalize }};
+
+    if (lat === 0 && lng === 0) return;
+
+    window.eqLat = lat;
+    window.eqLng = lng;
+
+    window.detailMap = L.map('equipmentMap', {
+        scrollWheelZoom: false,
+        zoomControl: true,
+    }).setView([lat, lng], 15);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+    }).addTo(window.detailMap);
+
+    var goldIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="background:#E8A317;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #1C2331;box-shadow:0 3px 10px rgba(0,0,0,.4);"><i class="fas fa-map-marker-alt" style="color:#1C2331;font-size:16px;"></i></div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18],
+    });
+
+    L.marker([lat, lng], {icon: goldIcon})
+        .addTo(window.detailMap)
+        .bindPopup('<strong>{{ equipment.name|escapejs }}</strong><br><small>{{ equipment.location_name|escapejs }}</small>')
+        .openPopup();
+
+    setTimeout(function() { if (window.detailMap) window.detailMap.invalidateSize(); }, 400);
+    setTimeout(function() { if (window.detailMap) window.detailMap.invalidateSize(); }, 1000);
+    setTimeout(function() { if (window.detailMap) window.detailMap.invalidateSize(); }, 2000);
+}
+
+function getDetailRoute() {
+    var btn = document.getElementById('routeBtn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Calcul...';
+    btn.disabled = true;
+
+    if (!navigator.geolocation) {
+        alert('Géolocalisation non supportée.');
+        btn.innerHTML = '<i class="fas fa-route me-1"></i>Itinéraire';
+        btn.disabled = false;
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var uLat = pos.coords.latitude;
+        var uLng = pos.coords.longitude;
+
+        var userIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background:#3B82F6;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(59,130,246,0.3), 0 2px 6px rgba(0,0,0,.3);"></div>',
+            iconSize: [16, 16], iconAnchor: [8, 8],
+        });
+        L.marker([uLat, uLng], {icon: userIcon}).addTo(window.detailMap).bindPopup('Votre position');
+
+        var url = 'https://router.project-osrm.org/route/v1/driving/' +
+            uLng + ',' + uLat + ';' + window.eqLng + ',' + window.eqLat +
+            '?overview=full&geometries=geojson';
+
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.code !== 'Ok' || !data.routes.length) {
+                    alert('Impossible de calculer l\'itinéraire.');
+                    return;
+                }
+                var route = data.routes[0];
+                var coords = route.geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
+
+                L.polyline(coords, {color: '#1C2331', weight: 7, opacity: 0.3}).addTo(window.detailMap);
+                L.polyline(coords, {color: '#E8A317', weight: 4, opacity: 0.9}).addTo(window.detailMap);
+
+                var bounds = L.latLngBounds([[uLat, uLng], [window.eqLat, window.eqLng]]);
+                window.detailMap.fitBounds(bounds, {padding: [40, 40]});
+
+                var distKm = (route.distance / 1000).toFixed(1);
+                var durMin = Math.round(route.duration / 60);
+                var durText = durMin >= 60 ? Math.floor(durMin/60) + 'h ' + (durMin%60) + 'min' : durMin + ' min';
+
+                document.getElementById('detailDist').textContent = distKm + ' km';
+                document.getElementById('detailDur').textContent = durText;
+                document.getElementById('detailRouteInfo').classList.remove('d-none');
+
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>Itinéraire affiché';
+            })
+            .catch(function() { alert('Erreur réseau.'); });
+    }, function() {
+        alert('Activez la géolocalisation pour calculer l\'itinéraire.');
+        btn.innerHTML = '<i class="fas fa-route me-1"></i>Itinéraire';
+        btn.disabled = false;
+    }, {enableHighAccuracy: true, timeout: 10000});
+}
+</script>
+{% endblock %}

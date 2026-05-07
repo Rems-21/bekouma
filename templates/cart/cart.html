@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load pricing %}
+
+{% block title %}Panier - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-shopping-cart me-2 text-gold"></i>Mon panier</h2>
+
+    {% if items %}
+    {% if not user_can_rent %}
+    <div class="alert alert-warning">
+        <i class="fas fa-id-card me-2"></i>
+        <strong>KYC requis pour payer.</strong>
+        <a href="{% url 'accounts:kyc' %}" class="alert-link">Soumettre ou compléter votre dossier</a>.
+    </div>
+    {% endif %}
+    <div class="alert alert-info-custom">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Rappel :</strong> Tous les matériels du panier doivent être pris le <strong>{{ rental_date|date:"d/m/Y" }}</strong> et rendus le <strong>{{ return_date|date:"d/m/Y" }}</strong>.
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            {% for item in items %}
+            <div class="card mb-3 cart-item-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            {% if item.equipment.image %}
+                            <img src="{{ item.equipment.image.url }}" class="img-fluid rounded" alt="{{ item.equipment.name }}">
+                            {% else %}
+                            <div class="text-center text-muted"><i class="fas fa-truck-loading fa-3x"></i></div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <h5><a href="{% url 'equipment:detail' item.equipment.slug %}" class="text-dark">{{ item.equipment.name }}</a></h5>
+                            <span class="text-muted small">{{ item.equipment.category.name }}</span>
+                            <p class="mb-0 text-gold fw-bold">{{ item.equipment|daily_price:request|intcomma }} FCFA/jour</p>
+                        </div>
+                        <div class="col-md-3">
+                            <form method="POST" action="{% url 'cart:update' item.id %}">
+                                {% csrf_token %}
+                                <div class="mb-2">
+                                    <label class="form-label small">Quantité</label>
+                                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control form-control-sm" onchange="this.form.submit()">
+                                </div>
+                                {% if item.equipment.requires_driver %}
+                                <div class="form-check">
+                                    <input type="checkbox" name="with_driver" class="form-check-input" {% if item.with_driver %}checked{% endif %} onchange="this.form.submit()">
+                                    <label class="form-check-label small">Chauffeur (+{{ item.equipment.driver_price_per_day|intcomma }} F/j)</label>
+                                </div>
+                                {% endif %}
+                            </form>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <p class="fw-bold mb-1">{{ item.subtotal|intcomma }} FCFA</p>
+                            <small class="text-muted">{{ item.num_days }} jour{{ item.num_days|pluralize }}</small>
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <a href="{% url 'cart:remove' item.id %}" class="btn btn-sm btn-outline-danger" title="Retirer">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'equipment:list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Continuer
+                </a>
+                <a href="{% url 'cart:clear' %}" class="btn btn-outline-danger" onclick="return confirm('Vider tout le panier ?')">
+                    <i class="fas fa-trash me-2"></i>Vider le panier
+                </a>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="col-lg-4">
+            <div class="card summary-card">
+                <div class="card-header bg-dark-nav text-white">
+                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Récapitulatif</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Période</span>
+                        <span>{{ rental_date|date:"d/m" }} - {{ return_date|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Articles</span>
+                        <span>{{ items|length }}</span>
+                    </div>
+                    <hr>
+                    {% for item in items %}
+                    <div class="d-flex justify-content-between mb-1 small">
+                        <span>{{ item.equipment.name }} x{{ item.quantity }}</span>
+                        <span>{{ item.subtotal|intcomma }} F</span>
+                    </div>
+                    {% endfor %}
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>Total</span>
+                        <span class="text-gold">{{ total|intcomma }} FCFA</span>
+                    </div>
+                    {% if user_can_rent %}
+                    <a href="{% url 'payments:checkout' %}" class="btn btn-primary-gold w-100 btn-lg mt-3">
+                        <i class="fas fa-credit-card me-2"></i>Passer au paiement
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:kyc' %}" class="btn btn-outline-gold w-100 btn-lg mt-3">
+                        <i class="fas fa-id-card me-2"></i>Valider mon identité (KYC)
+                    </a>
+                    {% endif %}
+                    <div class="text-center mt-2">
+                        <small class="text-muted"><i class="fas fa-shield-alt me-1"></i>Paiement sécurisé Notch Pay</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i>Politique d'annulation</h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-1"><i class="fas fa-check text-success me-1"></i>3 jours avant : 90% remboursé</li>
+                        <li class="mb-1"><i class="fas fa-minus text-warning me-1"></i>2 jours avant : 50% remboursé</li>
+                        <li><i class="fas fa-times text-danger me-1"></i>1 jour avant : aucun remboursement</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+        <h4>Votre panier est vide</h4>
+        <p class="text-muted">Parcourez notre catalogue et ajoutez des matériels à votre panier.</p>
+        <a href="{% url 'equipment:list' %}" class="btn btn-primary-gold btn-lg">
+            <i class="fas fa-search me-2"></i>Voir les matériels
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

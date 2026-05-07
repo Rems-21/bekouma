@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Connexion - RAOLY BTP{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-75">
+            <div class="col-md-5">
+                <div class="auth-card card shadow-lg">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <img src="{% static 'images/logo.png' %}" alt="RAOLY BTP" height="70" class="mb-3">
+                            <h3 class="text-dark-nav">Connexion</h3>
+                            <p class="text-muted">Accédez à votre espace de location</p>
+                        </div>
+                        <form method="POST">
+                            {% csrf_token %}
+                            {% if form.errors %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Identifiants incorrects. Veuillez réessayer.
+                            </div>
+                            {% endif %}
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nom d'utilisateur</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    {{ form.username }}
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Mot de passe</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    {{ form.password }}
+                                    <button type="button" class="btn btn-outline-secondary password-toggle-btn" aria-label="Afficher le mot de passe">
+                                        <i class="fas fa-eye" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <div class="text-end mt-2">
+                                    <a href="{% url 'accounts:password_reset' %}" class="small text-gold fw-bold text-decoration-none">
+                                        Mot de passe oublié ?
+                                    </a>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary-gold w-100 btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                            </button>
+                        </form>
+                        <hr>
+                        <p class="text-center mb-0">
+                            Pas encore de compte ? <a href="{% url 'accounts:register' %}" class="text-gold fw-bold">S'inscrire</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

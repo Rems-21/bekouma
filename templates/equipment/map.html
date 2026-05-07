@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Carte des matériels - RAOLY BTP{% endblock %}
+
+{% block extra_css %}
+<style>
+#fullMap { height: calc(100vh - 76px); width: 100%; z-index: 1; }
+.map-sidebar {
+    position: absolute;
+    top: 86px;
+    right: 10px;
+    z-index: 1000;
+    width: 340px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+}
+.sidebar-item { transition: background 0.2s; }
+.sidebar-item:hover { background: rgba(232,163,23,0.08); }
+.sidebar-item.active-item { background: rgba(232,163,23,0.15); border-left: 3px solid #E8A317; }
+.route-info {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: #1C2331;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    display: none;
+    min-width: 300px;
+}
+.route-info .route-stat { text-align: center; }
+.route-info .route-stat-value { font-size: 1.4rem; font-weight: 700; color: #E8A317; }
+.route-info .route-stat-label { font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,.6); letter-spacing: 1px; }
+.locate-btn {
+    position: absolute;
+    top: 86px;
+    left: 10px;
+    z-index: 1000;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="position-relative">
+    <div id="fullMap"></div>
+
+    <div class="locate-btn">
+        <button class="btn btn-primary-gold shadow" onclick="locateMe()" id="locateBtn">
+            <i class="fas fa-crosshairs me-1"></i> Ma position
+        </button>
+    </div>
+
+    <div class="map-sidebar d-none d-md-block">
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-map-marked-alt me-2 text-gold"></i>Matériels</h5>
+                <p class="text-muted small mb-2">Cliquez pour voir l'itinéraire</p>
+                <div id="equipmentListSidebar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="route-info" id="routeInfo">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex gap-4">
+                <div class="route-stat">
+                    <div class="route-stat-value" id="routeDistance">--</div>
+                    <div class="route-stat-label">Distance</div>
+                </div>
+                <div class="route-stat">
+                    <div class="route-stat-value" id="routeDuration">--</div>
+                    <div class="route-stat-label">Durée estimée</div>
+                </div>
+                <div class="route-stat">
+                    <div class="route-stat-value" id="routeDestination">--</div>
+                    <div class="route-stat-label">Destination</div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline-light ms-3" onclick="clearRoute()"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var mapInstance = null;
+var markers = {};
+var userMarker = null;
+var userLatLng = null;
+var routeLayer = null;
+var allEquipments = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    allEquipments = {{ equipments_json|safe }};
+
+    mapInstance = L.map('fullMap', { zoomControl: true, scrollWheelZoom: false }).setView([4.0511, 9.7679], 12);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+    }).addTo(mapInstance);
+
+    var goldIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="background:#E8A317;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #1C2331;box-shadow:0 3px 10px rgba(0,0,0,.4);"><i class="fas fa-truck" style="color:#1C2331;font-size:13px;"></i></div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -17],
+    });
+
+    var sidebar = document.getElementById('equipmentListSidebar');
+    var html = '';
+
+    allEquipments.forEach(function(eq) {
+        var marker = L.marker([eq.lat, eq.lng], {icon: goldIcon}).addTo(mapInstance);
+        markers[eq.id] = marker;
+
+        var imgHtml = eq.image ? '<img src="' + eq.image + '" style="width:100%;height:90px;object-fit:cover;border-radius:6px;" class="mb-2">' : '';
+        marker.bindPopup(
+            '<div style="min-width:220px;">' +
+                imgHtml +
+                '<strong style="font-size:14px;">' + eq.name + '</strong><br>' +
+                '<span style="color:#888;font-size:12px;">' + eq.category + '</span><br>' +
+                '<strong style="color:#E8A317;font-size:15px;">' + eq.price.toLocaleString() + ' FCFA/jour</strong><br>' +
+                '<small style="color:#666;"><i class="fas fa-map-pin"></i> ' + eq.location + '</small><br>' +
+                '<button onclick="getRoute(' + eq.id + ', ' + eq.lat + ', ' + eq.lng + ', \'' + eq.name.replace(/'/g, "\\'") + '\')" class="btn btn-sm mt-2" style="background:#1C2331;color:#E8A317;border:none;font-weight:600;width:100%;"><i class="fas fa-route me-1"></i>Itinéraire</button>' +
+                '<a href="/equipements/' + eq.slug + '/" class="btn btn-sm mt-1" style="background:#E8A317;color:#1C2331;border:none;font-weight:600;width:100%;">Voir détails</a>' +
+            '</div>'
+        );
+
+        html +=
+            '<div class="border-bottom py-2 px-2 sidebar-item rounded" data-eq-id="' + eq.id + '" style="cursor:pointer;"' +
+                ' onclick="goToEquipment(' + eq.id + ', ' + eq.lat + ', ' + eq.lng + ', \'' + eq.name.replace(/'/g, "\\'") + '\')">' +
+                '<div class="d-flex justify-content-between align-items-start">' +
+                    '<div>' +
+                        '<strong class="small d-block">' + eq.name + '</strong>' +
+                        '<small class="text-muted"><i class="fas fa-map-pin me-1"></i>' + (eq.location || eq.category) + '</small>' +
+                    '</div>' +
+                    '<div class="text-end">' +
+                        '<span class="badge bg-gold small d-block">' + eq.price.toLocaleString() + ' F</span>' +
+                        '<span class="dist-label text-muted" style="font-size:0.65rem;" id="dist-' + eq.id + '"></span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    });
+
+    sidebar.innerHTML = html || '<p class="text-muted text-center py-3">Aucun matériel géolocalisé</p>';
+
+    if (allEquipments.length > 0) {
+        var bounds = L.latLngBounds(allEquipments.map(function(e) { return [e.lat, e.lng]; }));
+        mapInstance.fitBounds(bounds, {padding: [60, 60]});
+    }
+
+    setTimeout(function() { mapInstance.invalidateSize(); }, 200);
+
+    var params = new URLSearchParams(window.location.search);
+    var focusId = params.get('focus');
+    if (focusId) {
+        var focusEq = allEquipments.find(function(e) { return e.id == focusId; });
+        if (focusEq) {
+            setTimeout(function() {
+                goToEquipment(focusEq.id, focusEq.lat, focusEq.lng, focusEq.name);
+            }, 500);
+        }
+    }
+
+    // Try auto-locate
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            setUserPosition(pos.coords.latitude, pos.coords.longitude);
+        }, function() {}, {enableHighAccuracy: false, timeout: 5000});
+    }
+});
+
+function locateMe() {
+    var btn = document.getElementById('locateBtn');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Localisation...';
+    btn.disabled = true;
+
+    if (!navigator.geolocation) {
+        alert('La géolocalisation n\'est pas supportée par votre navigateur.');
+        btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Ma position';
+        btn.disabled = false;
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        setUserPosition(pos.coords.latitude, pos.coords.longitude);
+        mapInstance.flyTo([pos.coords.latitude, pos.coords.longitude], 14, {duration: 1});
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Localisé';
+        btn.disabled = false;
+        setTimeout(function() { btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Ma position'; }, 2000);
+    }, function(err) {
+        alert('Impossible de vous localiser. Vérifiez les permissions de géolocalisation.');
+        btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Ma position';
+        btn.disabled = false;
+    }, {enableHighAccuracy: true, timeout: 10000});
+}
+
+function setUserPosition(lat, lng) {
+    userLatLng = [lat, lng];
+
+    if (userMarker) {
+        userMarker.setLatLng(userLatLng);
+    } else {
+        var userIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background:#3B82F6;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(59,130,246,0.3), 0 2px 8px rgba(0,0,0,.3);"></div>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+        });
+        userMarker = L.marker(userLatLng, {icon: userIcon, zIndexOffset: 1000}).addTo(mapInstance);
+        userMarker.bindPopup('<strong>Votre position</strong>');
+    }
+
+    // Calculate straight-line distances and update sidebar
+    allEquipments.forEach(function(eq) {
+        var dist = haversine(lat, lng, eq.lat, eq.lng);
+        var el = document.getElementById('dist-' + eq.id);
+        if (el) {
+            el.textContent = dist < 1 ? Math.round(dist * 1000) + ' m' : dist.toFixed(1) + ' km';
+        }
+    });
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function goToEquipment(id, lat, lng, name) {
+    if (!mapInstance) return;
+
+    document.querySelectorAll('.sidebar-item').forEach(function(el) { el.classList.remove('active-item'); });
+    var active = document.querySelector('[data-eq-id="' + id + '"]');
+    if (active) active.classList.add('active-item');
+
+    if (userLatLng) {
+        getRoute(id, lat, lng, name);
+    } else {
+        mapInstance.flyTo([lat, lng], 17, {duration: 0.8});
+        setTimeout(function() { if (markers[id]) markers[id].openPopup(); }, 900);
+    }
+}
+
+function getRoute(id, destLat, destLng, name) {
+    if (!userLatLng) {
+        locateMe();
+        setTimeout(function() {
+            if (userLatLng) getRoute(id, destLat, destLng, name);
+        }, 3000);
+        return;
+    }
+
+    clearRoute();
+
+    var url = 'https://router.project-osrm.org/route/v1/driving/' +
+        userLatLng[1] + ',' + userLatLng[0] + ';' +
+        destLng + ',' + destLat +
+        '?overview=full&geometries=geojson&steps=true';
+
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.code !== 'Ok' || !data.routes || !data.routes.length) {
+                alert('Impossible de calculer l\'itinéraire.');
+                return;
+            }
+
+            var route = data.routes[0];
+            var coords = route.geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
+
+            routeLayer = L.polyline(coords, {
+                color: '#E8A317',
+                weight: 5,
+                opacity: 0.85,
+                smoothFactor: 1,
+                dashArray: null,
+            }).addTo(mapInstance);
+
+            // Route shadow for visibility
+            var shadow = L.polyline(coords, {
+                color: '#1C2331',
+                weight: 8,
+                opacity: 0.3,
+            }).addTo(mapInstance);
+            routeLayer._shadow = shadow;
+
+            mapInstance.fitBounds(routeLayer.getBounds(), {padding: [80, 80]});
+
+            var distKm = (route.distance / 1000).toFixed(1);
+            var durMin = Math.round(route.duration / 60);
+            var durText = durMin >= 60 ? Math.floor(durMin/60) + 'h ' + (durMin%60) + 'min' : durMin + ' min';
+
+            document.getElementById('routeDistance').textContent = distKm + ' km';
+            document.getElementById('routeDuration').textContent = durText;
+            document.getElementById('routeDestination').textContent = name.length > 18 ? name.substring(0, 18) + '...' : name;
+            document.getElementById('routeInfo').style.display = 'block';
+
+            if (markers[id]) markers[id].openPopup();
+        })
+        .catch(function() {
+            alert('Erreur lors du calcul de l\'itinéraire.');
+        });
+}
+
+function clearRoute() {
+    if (routeLayer) {
+        mapInstance.removeLayer(routeLayer);
+        if (routeLayer._shadow) mapInstance.removeLayer(routeLayer._shadow);
+        routeLayer = null;
+    }
+    document.getElementById('routeInfo').style.display = 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Suivi GPS — RAOLY BTP</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: system-ui, sans-serif;
+            background: #0f1419; color: #e8e8e8;
+            min-height: 100dvh; padding: 16px;
+        }
+        h1 { font-size: 1.1rem; margin: 0 0 8px; color: #E8A317; }
+        .sub { font-size: 0.85rem; opacity: 0.85; margin-bottom: 16px; }
+        .status {
+            padding: 12px 14px; border-radius: 10px; margin-bottom: 12px;
+            background: rgba(28, 35, 49, 0.95); border: 1px solid rgba(232, 163, 23, 0.35);
+            font-size: 0.9rem; line-height: 1.5;
+        }
+        .err { border-color: #dc3545; color: #ffb4b4; }
+        .ok { border-color: #198754; }
+        button {
+            width: 100%; padding: 14px; margin-top: 8px; border: none; border-radius: 10px;
+            font-weight: 700; font-size: 1rem; cursor: pointer;
+            background: #E8A317; color: #111;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        small { display: block; margin-top: 16px; opacity: 0.55; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    {% if error %}
+    <h1>Suivi indisponible</h1>
+    <div class="status err">{{ error }}</div>
+    {% else %}
+    <h1>Suivi GPS</h1>
+    <div class="sub">{{ equipment_name }} — réservation #{{ reservation_id }}</div>
+    <div id="status" class="status">Autorisez la localisation pour envoyer la position au centre opérationnel.</div>
+    <button type="button" id="btnStart">Démarrer l’envoi de position</button>
+    <small>La page doit rester ouverte. Données transmises de façon sécurisée à RAOLY BTP.</small>
+    <script>
+    (function() {
+        const PING_URL = "{{ ping_url|escapejs }}";
+        const statusEl = document.getElementById('status');
+        const btn = document.getElementById('btnStart');
+        let watchId = null;
+
+        function sendPosition(pos) {
+            const body = JSON.stringify({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                accuracy: pos.coords.accuracy
+            });
+            fetch(PING_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body
+            }).then(function(r) {
+                if (r.ok) {
+                    statusEl.textContent = 'Position envoyée (' + new Date().toLocaleTimeString('fr-FR') + ').';
+                    statusEl.classList.add('ok');
+                } else {
+                    statusEl.textContent = 'Erreur serveur (' + r.status + '). Réessayez.';
+                    statusEl.classList.remove('ok');
+                }
+            }).catch(function() {
+                statusEl.textContent = 'Réseau indisponible. Vérifiez la connexion.';
+                statusEl.classList.remove('ok');
+            });
+        }
+
+        btn.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                statusEl.textContent = 'La géolocalisation n’est pas disponible sur cet appareil.';
+                return;
+            }
+            btn.disabled = true;
+            statusEl.textContent = 'Localisation en cours…';
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                sendPosition(pos);
+                if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+                watchId = navigator.geolocation.watchPosition(function(p) {
+                    sendPosition(p);
+                }, function(err) {
+                    statusEl.textContent = 'Erreur GPS : ' + (err.message || 'permission refusée');
+                    btn.disabled = false;
+                }, { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 });
+                statusEl.textContent = 'Envoi actif (mise à jour automatique).';
+                statusEl.classList.add('ok');
+            }, function(err) {
+                statusEl.textContent = 'Permission refusée ou GPS indisponible.';
+                btn.disabled = false;
+            }, { enableHighAccuracy: true, timeout: 15000 });
+        });
+    })();
+    </script>
+    {% endif %}
+</body>
+</html>
