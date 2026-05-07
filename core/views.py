@@ -176,6 +176,6 @@ def live_tracking_ping(request, token):
 def google_verification(request):
     site_info = SiteInfo.objects.first()
     if site_info and site_info.google_verification_code:
-        return render(request, 'core/google2c82be27c4a4a6e2.html', {'code': site_info.google_verification_code})
+        return render(request, 'core/google2c82be27c4a4a6e2.html', {'code': site_info})
     else:
         return render(request, 'core/google2c82be27c4a4a6e2.html', {'code': ''}, status=404)
